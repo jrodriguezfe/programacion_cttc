@@ -1,0 +1,313 @@
+/* PROYECTO: catalogo-cttc-senati 
+   ESTILO: Enterprise Professional 2026 (Full Version)
+*/
+
+:root {
+    --bg-app: #f8fafc;
+    --bg-card: #ffffff;
+    --primary-green: #10b981; 
+    --primary-dark: #064e3b;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --senati-blue: #0054a6;
+    --info-blue: #0ea5e9;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    line-height: 1.5;
+}
+
+/* --- NAVEGACIÓN --- */
+.navbar {
+    background: var(--bg-card);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.brand { font-size: 1.25rem; font-weight: 800; color: var(--primary-dark); }
+.brand span { color: var(--primary-green); }
+
+/* --- SISTEMA DE PESTAÑAS --- */
+.controls-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.tabs-navigation {
+    display: flex;
+    background: #e2e8f0;
+    padding: 4px;
+    border-radius: 10px;
+}
+
+.tab-btn {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 8px;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: 0.3s;
+}
+
+.tab-btn.active {
+    background: white;
+    color: var(--primary-green);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; animation: fadeIn 0.4s ease; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* --- TARJETAS DE PROGRAMAS --- */
+.programa-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+.prog-header {
+    border-bottom: 2px solid var(--bg-app);
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+.prog-header h3 { color: var(--senati-blue); font-size: 1.1rem; }
+
+.sub-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    font-size: 0.85rem; 
+}
+
+.sub-table th { background: #f8fafc; color: var(--text-muted); padding: 10px; }
+.sub-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; }
+
+/* --- COMPONENTES DE TABLA --- */
+.table-container {
+    background: var(--bg-card); 
+    border-radius: 12px;
+    border: 1px solid var(--border-color); 
+    overflow: hidden;
+    margin-top: 1rem;
+}
+
+table { width: 100%; border-collapse: collapse; }
+th { background: #f1f5f9; padding: 1rem; text-align: left; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); }
+td { padding: 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.875rem; }
+
+/* Indicadores de Estado (SINFO) */
+.status-dot {
+    height: 10px;
+    width: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.status-dot.green { background-color: #10b981; box-shadow: 0 0 8px #10b981; }
+.status-dot.gray { background-color: #cbd5e1; }
+
+/* --- BOTONES Y FORMULARIOS --- */
+.btn-primary, .btn-save {
+    background: var(--primary-green);
+    color: white; border: none; padding: 0.6rem 1.2rem;
+    border-radius: 8px; font-weight: 600; cursor: pointer;
+    transition: filter 0.2s;
+}
+
+.btn-primary:hover, .btn-save:hover { filter: brightness(0.9); }
+
+.btn-dia {
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    background-color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    color: #334155;
+}
+
+.btn-dia.active {
+    background-color: #22c55e !important;
+    color: white !important;
+    border-color: #166534;
+    font-weight: bold;
+}
+
+/* --- ACCIONES MASIVAS (EXCEL) --- */
+.bulk-actions {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    border: 1px dashed var(--primary-green);
+}
+
+.button-group-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn-secondary {
+    background: #64748b;
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-secondary:hover { background: #475569; }
+
+.btn-link-download {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-link-download:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+}
+
+/* Estilos de Guía Informativa de Importación */
+.import-guide {
+    margin-top: 15px;
+    padding: 12px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    font-size: 11px;
+    color: #475569;
+    border-left: 4px solid var(--info-blue);
+}
+
+.import-guide strong { color: var(--text-main); }
+
+.import-guide ul {
+    margin-left: 18px;
+    margin-top: 5px;
+}
+
+.info-tag {
+    font-size: 12px;
+    color: var(--info-blue);
+    cursor: help;
+    font-weight: 600;
+}
+
+/* --- ADMINISTRACIÓN --- */
+.admin-content { 
+    max-width: 1200px; 
+    margin: 2rem auto; 
+    padding: 0 1rem; 
+}
+
+.form-container { 
+    background: white; 
+    padding: 2.5rem; 
+    border-radius: 16px; 
+    border: 1px solid var(--border-color); 
+    box-shadow: var(--shadow);
+}
+
+.form-grid-two-columns {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.field-group { 
+    display: flex; 
+    flex-direction: column; 
+    margin-bottom: 0.5rem;
+}
+
+.field-group label { 
+    font-size: 0.75rem; 
+    font-weight: 700; 
+    color: var(--text-muted); 
+    margin-bottom: 0.4rem; 
+    text-transform: uppercase;
+}
+
+.field-group input, 
+.field-group select { 
+    padding: 0.75rem; 
+    border-radius: 8px; 
+    border: 1px solid var(--border-color); 
+    background: #f9fafb; 
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+/* --- MODALES --- */
+.modal { 
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); 
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content.small { 
+    background: white; 
+    padding: 2rem; 
+    border-radius: 20px; 
+    width: 90%; 
+    max-width: 400px; 
+}
+
+/* --- UTILIDADES --- */
+.hidden { display: none !important; }
+.shadow { box-shadow: var(--shadow); }
+
+@media (max-width: 768px) {
+    .controls-wrapper { flex-direction: column; align-items: stretch; }
+    .form-grid-two-columns { grid-template-columns: 1fr; }
+    .button-group-row { flex-direction: column; }
+    .button-group-row button, .button-group-row label { width: 100%; text-align: center; }
+}
+/* Optimización para 8 columnas */
+table {
+    table-layout: auto;
+    min-width: 1000px; /* Asegura que no se amontone en pantallas pequeñas */
+}
+
+th, td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.8rem; /* Un poco más pequeño para que quepan todos los campos */
+}
+
+.child-row-style td:first-child {
+    padding-left: 2rem;
+}
