@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Administrativo | CTTC SENATI</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="admin-wrapper">
+        <header class="navbar">
+            <div class="brand">CTTC <span>ADMIN</span></div>
+            <div class="nav-actions">
+                <span id="adminUser" class="u-name"></span>
+                <button onclick="window.location.href='index.html'" class="btn-primary" style="background: #64748b;">Ver Vista Pública</button>
+                <button id="btnLogout" class="btn-delete">Cerrar Sesión</button>
+            </div>
+        </header>
+
+        <main class="admin-content">
+            <section class="form-container shadow">
+                <header class="section-title">
+                    <h2>Configuración de Programación Académica</h2>
+                    <p>Complete los datos para publicar o actualizar un curso/programa.</p>
+                </header>
+
+                <form id="adminForm">
+                    <div class="type-selection">
+                        <label for="regType">Tipo de Registro:</label>
+                        <select id="regType" class="custom-select" style="width: 100%; margin-top: 8px; padding: 10px;">
+                            <option value="CURSO">Módulo o Curso</option>
+                            <option value="PROGRAMA">Programa</option>
+                        </select>
+                    </div>
+
+                    <div class="form-grid-two-columns" id="fieldsGrid"></div>
+
+                    <div class="form-footer" style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button type="submit" class="btn-save" id="btnSubmitMain" style="flex: 2;">Guardar Registro / Módulo</button>
+                        <button type="button" class="btn-link" id="btnFinalizar" style="flex: 1; background: #64748b; color: white; border: none;">Finalizar y Limpiar Todo</button>
+                    </div>
+                </form>
+            </section>
+
+            <section id="tableManagementSection" class="form-container shadow" style="margin-top: 30px;">
+                <div class="bulk-actions shadow">
+                    <h3>Gestión Masiva (Excel)</h3>
+                    <div class="button-group-row">
+                        <button type="button" id="btnDescargarPlantilla" class="btn-link-download" style="margin-right: 10px;">📄 Descargar Plantilla</button>
+                        
+                        <button id="btnExportExcel" class="btn-secondary">📥 Exportar Todo a Excel</button>
+                        
+                        <label for="importExcel" class="btn-primary" style="cursor:pointer">
+                            📤 Importar desde Excel
+                        </label>
+                        <input type="file" id="importExcel" accept=".xlsx, .xls" style="display:none">
+                    </div>
+
+                    <div class="import-guide">
+                        <strong>Campos requeridos en el Excel:</strong>
+                        <p>Asegúrese de que la primera fila contenga exactamente los nombres de los campos (TIPO, NRC, PROGRAMA, etc.). Use "SI" o "NO" para los indicadores de control.</p>
+                    </div>
+
+                    <small class="help-text">Asegúrese de usar el formato de columnas predefinido.</small>
+                </div>
+
+                <div class="section-title" style="margin-top: 30px;">
+                    <h2>Listado de Gestión</h2>
+                    <p>Seleccione un registro para editar sus datos o eliminarlo permanentemente.</p>
+                </div>
+                
+                <div class="table-container" style="overflow-x:auto; margin-top: 20px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>NRC</th>
+                                <th>Programa / Curso</th>
+                                <th>Inicio</th>
+                                <th style="text-align: center;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
+    <script type="module" src="admin.js"></script>
+</body>
+</html>
