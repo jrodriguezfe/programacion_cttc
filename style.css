@@ -300,12 +300,13 @@ td { padding: 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.8
 /* Optimización para 8 columnas */
 table {
     table-layout: auto;
-    min-width: 1000px; /* Asegura que no se amontone en pantallas pequeñas */
+    min-width: 1200px; /* Asegura que no se amontone en pantallas pequeñas */
 }
 
 th, td {
     padding: 0.75rem 0.5rem;
     font-size: 0.8rem; /* Un poco más pequeño para que quepan todos los campos */
+    vertical-align: middle; /* Alineación vertical central */
 }
 
 .child-row-style td:first-child {
@@ -329,4 +330,48 @@ th, td {
 
 .prog-master-row:hover {
     background-color: #f1f5f9;
+}
+
+/* Estilo para los 3 registros más próximos */
+.highlight-urgent {
+    background-color: #fffbeb !important; /* Un fondo crema muy suave */
+    border-left: 5px solid #f59e0b !important; /* Borde naranja brillante */
+    position: relative;
+}
+
+.highlight-urgent td:first-child {
+    color: #d97706;
+    font-weight: 800;
+    animation: pulse-text 2s infinite;
+}
+
+.highlight-urgent::after {
+    content: "🔥 ¡Inicia pronto!";
+    position: absolute;
+    right: 10px;
+    top: 5px;
+    font-size: 10px;
+    background: #f59e0b;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+@keyframes pulse-text {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+.multi-docente-container select {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.multi-docente-container select option {
+    padding: 8px;
+    border-bottom: 1px solid #f1f5f9;
 }

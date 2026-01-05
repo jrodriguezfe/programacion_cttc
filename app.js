@@ -39,6 +39,9 @@ function loadData() {
 
         const rawData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         const data = rawData.filter(d => currentMonth === "all" || (d["Fecha de inicio"] || "").split('-')[1] === currentMonth);
+        
+        // Declaramos globalmente en este scope para que createDataRow pueda leerla
+        window.proximosIds = data.slice(0, 3).map(d => d.id);
 
         const programasMap = {};
         const independientes = [];
@@ -53,59 +56,113 @@ function loadData() {
         });
 
         // 1. Renderizar Programas
-        // Dentro de loadData() en app.js
         Object.keys(programasMap).forEach(nombreProg => {
             const modulos = programasMap[nombreProg];
-            const progId = nombreProg.replace(/\s+/g, '-'); // Crea un ID único sin espacios
+            const progId = nombreProg.replace(/\s+/g, '-');
+
+            const modulosOrdenados = [...modulos].sort((a, b) => 
+                new Date(a["Fecha de inicio"]) - new Date(b["Fecha de inicio"])
+            );
+
+            const primerModulo = modulosOrdenados[0];
+            const codigoProg = primerModulo["f_CODIGO_PROGRAMA"] || primerModulo["PROGRAMA"] || 'Sin Código';
+            
+            const partObjetivoProg = parseInt(primerModulo["#Participantes Objetivo"]) || 0;
+            const partRealProg = parseInt(primerModulo["#Participantes Real Total"]) || 0;
+            const duracionTotal = modulos.reduce((acc, m) => acc + (parseInt(m["Duracion"] || m["Duración"]) || 0), 0);
 
             const trMaster = document.createElement('tr');
             trMaster.className = 'prog-master-row';
             trMaster.style.cursor = "pointer";
+            trMaster.style.backgroundColor = "#f1f5f9"; 
+            
+            // Fila Maestra alineada a 9 columnas usando colspan="2"
             trMaster.innerHTML = `
-                <td colspan="6"><strong>📂 PROGRAMA: ${nombreProg}</strong></td>
-                <td style="text-align:center;"><span class="badge-prog">PROGRAMA</span></td>
-                <td style="text-align:center;">▼ ${modulos.length} Módulos</td>
+                <td><strong>${primerModulo["Fecha de inicio"] || '-'}</strong></td>
+                <td colspan="2">
+                    <strong>📂 PROGRAMA: ${nombreProg}</strong><br>
+                    <small style="color:#0ea5e9;">ID: ${codigoProg}</small>
+                </td>
+                <td style="text-align:center;">---</td>
+                <td>${duracionTotal} hrs</td>
+                <td style="font-size:10px;">${primerModulo["Horario"] || '-'}</td>
+                <td style="text-align:center;">---</td>
+                <td style="text-align:center;"><strong>${partObjetivoProg}</strong></td>
+                <td style="text-align:center;"><strong>${partRealProg}</strong></td>
             `;
 
-            // Lógica para mostrar/ocultar módulos al hacer clic
-            trMaster.onclick = () => {
+            trMaster.onclick = (e) => {
                 const childRows = document.querySelectorAll(`.prog-child-${progId}`);
-                childRows.forEach(row => {
-                    row.classList.toggle('hidden-row');
-                });
+                if (e.detail === 2) { 
+                    openQuickEdit(primerModulo.id, primerModulo);
+                } else {
+                    childRows.forEach(row => row.classList.toggle('hidden-row'));
+                }
             };
 
             tbody.appendChild(trMaster);
 
-            // Agregar los módulos como filas ocultas por defecto
             modulos.forEach(m => {
-                // Se añade la clase 'hidden-row' para que inicien contraídos
-                tbody.appendChild(createDataRow(m, `prog-child-${progId} hidden-row child-row-style`));
+                const objIndividual = parseInt(m["#Participantes Objetivo"]) || 0;
+                const realIndividual = parseInt(m["#Participantes Real Total"]) || 0;
+
+                // Lógica de sumatoria heredada para visualización
+                const mVisual = {
+                    ...m,
+                    "#Participantes Objetivo": objIndividual + partObjetivoProg,
+                    "#Participantes Real Total": realIndividual + partRealProg
+                };
+
+                tbody.appendChild(createDataRow(mVisual, `prog-child-${progId} hidden-row child-row-style`));
             });
         });
-        
 
-        // 2. Renderizar Cursos
+        // 2. Cursos Independientes
         independientes.forEach(c => tbody.appendChild(createDataRow(c, 'curso-row-style')));
     });
 }
-
-function createDataRow(d, className) {
+function createDataRow(d, customClass = '') {
     const tr = document.createElement('tr');
-    tr.className = className;
+    
+    // 1. Identificar si es uno de los 3 cursos más próximos para resaltar
+    // proximosIds debe ser calculado en loadData() antes de llamar a esta función
+    const esProximo = typeof proximosIds !== 'undefined' && proximosIds.includes(d.id);
+    
+    // 2. Asignar clases: customClass para estructura y highlight-urgent para atención visual
+    tr.className = `${customClass} ${esProximo ? 'highlight-urgent' : ''}`;
     tr.style.cursor = "pointer";
-    // Mapeo de los 8 campos solicitados
+    
+    // 3. Determinar el nombre a mostrar (Prioridad al campo MODULO-CURSO)
+    const nombreModuloCurso = d["MODULO-CURSO"] || d["PROGRAMA"] || "---";
+
+    // 4. Mapeo final de las 9 columnas según index.html actualizado:
+    // 1. Fecha | 2. Programa | 3. Módulo-Curso | 4. Docente | 5. Duración | 6. Horario | 7. NRC | 8. Obj | 9. Real
     tr.innerHTML = `
-        <td><strong>${d["Fecha de inicio"] || '-'}</strong></td>
-        <td>${d["PROGRAMA"] || d["MODULO-CURSO"] || '-'}</td>
-        <td>${d["Docente"] || '-'}</td>
-        <td>${d["Duracion"] || d["Duración"] || '-'}</td>
-        <td style="font-size:10px;">${d["Horario"] || '-'}</td>
-        <td>${d["NRC"] || '-'}</td>
-        <td style="text-align:center;">${d["#Participantes Objetivo"] || 0}</td>
-        <td style="text-align:center;">${d["#Participantes Real Total"] || 0}</td>
+        <td>
+            <strong>${d["Fecha de inicio"] || '--'}</strong>
+            ${esProximo ? '<br><span class="badge-urgent">PRÓXIMO</span>' : ''}
+        </td>
+        <td style="color: #64748b; font-size: 0.85rem;">
+            ${d["PROGRAMA"] || 'CURSO INDEP.'}
+        </td>
+        <td>
+            <strong>${nombreModuloCurso}</strong>
+        </td>
+        <td>${d["Docente"] || '--'}</td>
+        <td>${d.Duracion || d.Duración || '--'} hrs</td>
+        <td style="font-size:10px;">${d.Horario || '--'}</td>
+        <td>${d.NRC || '--'}</td>
+        <td style="text-align:center;">
+            ${d["#Participantes Objetivo"] || 0}
+        </td>
+        <td style="text-align:center;">
+            ${d["#Participantes Real Total"] || 0}
+        </td>
     `;
+
+    // 5. Vincular evento de click para abrir el modal de edición rápida
     tr.onclick = () => openQuickEdit(d.id, d);
+
     return tr;
 }
 
@@ -115,7 +172,10 @@ function openQuickEdit(id, data) {
     const input = document.getElementById('inpRealTotal');
     const adminActions = document.getElementById('modalAdminActions');
 
-    document.getElementById('courseNameTitle').textContent = data["MODULO/CURSO"] || data["PROGRAMA"] || "Sin nombre";
+    // Prioridad: Si tiene MODULO-CURSO lo muestra, si no, usa el nombre del PROGRAMA
+    const nombreAMostrar = data["MODULO-CURSO"] || data["PROGRAMA"] || "Sin nombre";
+    document.getElementById('courseNameTitle').textContent = nombreAMostrar;
+    
     input.value = data["#Participantes Real Total"] || 0;
 
     if (!userLogged) {

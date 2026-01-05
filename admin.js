@@ -79,7 +79,17 @@ function renderInput(campo, nextItem) {
     let input = '';
     if (campo === "Item") input = `<input type="number" id="${id}" value="${nextItem}" readonly style="background:#e5e7eb;">`;
     else if (campo === "AÑO") input = `<input type="number" id="${id}" value="2026">`;
-    else if (campo === "Docente") input = `<select id="${id}"><option value="">Seleccione...</option>${DOCENTES.map(d => `<option value="${d}">${d}</option>`).join('')}</select>`;
+
+    else if (campo === "Docente") {
+        input = `
+            <div class="multi-docente-container">
+                <select id="${id}" multiple style="height: 100px; padding: 5px;">
+                    ${DOCENTES.map(d => `<option value="${d}">${d}</option>`).join('')}
+                </select>
+                <small style="color: #64748b; font-size: 10px;">Mantenga presionado Ctrl (o Cmd) para seleccionar varios.</small>
+            </div>`;
+    }
+
     else if (campo === "PROGRAMA") input = `<select id="${id}"><option value="">Seleccione...</option>${PROGRAMAS_NOMBRES.map(p => `<option value="${p}">${p}</option>`).join('')}</select>`;
     else if (campo.includes("MODALIDAD")) input = `<select id="${id}"><option value="Online">Online</option><option value="Presencial">Presencial</option><option value="Semipresencial">Semipresencial</option></select>`;
     else if (campo === "Horario") input = `<div id="horarioContainer" style="grid-column: 1 / -1;"></div><input type="hidden" id="${id}">`;
@@ -195,11 +205,16 @@ function configurarEventos() {
 function recolectarDatosGestion() {
     const data = {};
     let horarioStr = "";
+    
+    // 1. Recolección de Horario (Bloques)
     document.querySelectorAll('.horario-bloque').forEach(b => {
         const dias = Array.from(b.querySelectorAll('.btn-dia.active')).map(btn => btn.textContent);
-        if (dias.length > 0) horarioStr += `${b.querySelector('p').textContent}: ${dias.join('-')} (${b.querySelector('.t-ini').value} a ${b.querySelector('.t-fin').value}) | `;
+        if (dias.length > 0) {
+            horarioStr += `${b.querySelector('p').textContent}: ${dias.join('-')} (${b.querySelector('.t-ini').value} a ${b.querySelector('.t-fin').value}) | `;
+        }
     });
 
+    // 2. Recolección de Campos de Gestión
     CAMPOS_GESTION.forEach(c => {
         const id = `f_${c.replace(/ /g, "_")}`;
         const el = document.getElementById(id);
@@ -207,10 +222,19 @@ function recolectarDatosGestion() {
         else if (el) data[c] = el.value;
     });
 
+    // 3. Manejo especial de Docente (Múltiples valores)
+    const elDocente = document.getElementById('f_Docente');
+    if (elDocente && elDocente.multiple) {
+        const seleccionados = Array.from(elDocente.selectedOptions).map(opt => opt.value).filter(v => v !== "");
+        data["Docente"] = seleccionados.join(", "); // Guarda como "DOCENTE A, DOCENTE B"
+    }
+
+    // 4. Recolección de Checkboxes (SI/NO)
     CAMPOS_CHECKBOX.forEach(c => {
         const el = document.getElementById(`f_${c.replace(/ /g, "_")}`);
         if (el) data[c] = el.checked ? "SI" : "NO";
     });
+
     return data;
 }
 
