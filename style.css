@@ -310,4 +310,26 @@ th, td {
 
 .child-row-style td:first-child {
     padding-left: 2rem;
+<<<<<<< HEAD
+=======
+}
+
+/* Estilo para ocultar las filas */
+.hidden-row {
+    display: none !important;
+}
+
+/* Estilo para las filas de módulos (hijos) */
+.child-row-style {
+    background-color: #f9fafb; /* Color ligeramente distinto */
+}
+
+.child-row-style td:first-child {
+    padding-left: 2rem; /* Indentación para efecto de jerarquía */
+    border-left: 4px solid var(--primary-green);
+}
+
+.prog-master-row:hover {
+    background-color: #f1f5f9;
+>>>>>>> a04f7016686eb0f23a2dc28bc1d4d3a50a4cc3f4
 }

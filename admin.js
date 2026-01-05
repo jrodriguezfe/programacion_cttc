@@ -7,12 +7,21 @@ import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/fi
 
 // 1. CONFIGURACIÓN FIREBASE
 const firebaseConfig = {
+<<<<<<< HEAD
     apiKey: "AIzaSyB38Wbf0Q9YLz61vxQXVw1oSpMNyPVGy-c",
     authDomain: "programacion-cttc.firebaseapp.com",
     projectId: "programacion-cttc",
     storageBucket: "programacion-cttc.firebasestorage.app",
     messagingSenderId: "2776502914",
     appId: "1:2776502914:web:6389898d92d7c4b5ba1a9b"
+=======
+  apiKey: "AIzaSyB38Wbf0Q9YLz61vxQXVw1oSpMNyPVGy-c",
+  authDomain: "programacion-cttc.firebaseapp.com",
+  projectId: "programacion-cttc",
+  storageBucket: "programacion-cttc.firebasestorage.app",
+  messagingSenderId: "2776502914",
+  appId: "1:2776502914:web:6389898d92d7c4b5ba1a9b"
+>>>>>>> a04f7016686eb0f23a2dc28bc1d4d3a50a4cc3f4
 };
 
 const app = initializeApp(firebaseConfig);
@@ -26,7 +35,11 @@ window.editandoProgramaActivo = null;
 
 const FERIADOS_2026 = ["2026-01-01", "2026-04-02", "2026-04-03", "2026-05-01", "2026-06-07", "2026-06-29", "2026-07-23", "2026-07-28", "2026-07-29", "2026-08-06", "2026-08-30", "2026-10-08", "2026-11-01", "2026-12-08", "2026-12-09", "2026-12-25"];
 const CAMPOS_CABECERA = ["Item", "EMPRESA", "Docente", "AÑO", "PROGRAMA", "EDICIÓN", "MODALIDAD PROGRAMA"];
+<<<<<<< HEAD
 const CAMPOS_GESTION = ["MODULO/CURSO", "MODALIDAD MÓDULO", "MAT-CUR", "NRC Semilla", "NRC", "Horario", "Duracion", "Fecha de inicio", "Fecha de fin", "Precio Sinfo", "#Participantes Objetivo", "#Participantes Real Total", "#Participantes aprobados", "# participantes desertaron", "Software/Aplicativo", "OBS"];
+=======
+const CAMPOS_GESTION = ["MODULO-CURSO", "MODALIDAD MÓDULO", "MAT-CUR", "NRC Semilla", "NRC", "Horario", "Duracion", "Fecha de inicio", "Fecha de fin", "Precio Sinfo", "#Participantes Objetivo", "#Participantes Real Total", "#Participantes aprobados", "# participantes desertaron", "Software-Aplicativo", "OBS"];
+>>>>>>> a04f7016686eb0f23a2dc28bc1d4d3a50a4cc3f4
 const CAMPOS_CHECKBOX = ["curso virtualizado", "Con nota en SINFO?", "Con certificados emitidos?", "Con atributo?_SSADETL", "Con acta de notas_SFASLST", "Con VAEE (SENATI VIRTUAL)"];
 const DOCENTES = ["ANDRES CCOCA", "CARMELON GONZALES", "JONATAN BEGAZO", "JORGE CAYCHO", "LUIS QUELOPANA", "MARCO POLO", "MARIA PEREZ", "MARTA LAURA", "MARTHA MAYTA", "NANCY PACHECO", "RICARDO MORENO", "ROBERT CALDERON", "VICTOR HUAMANÍ", "VICTOR GASTAÑETA"];
 const PROGRAMAS_NOMBRES = ["CURSO", "PROGRAMA DE GESTIÓN PARA LA FORMACIÓN DE PATRONISTAS DIGITALES", "ASISTENTE EN DISEÑO DE MODAS", "PROGRAMA DE GESTIÓN PARA FORMACIÓN DE AUDITORES DE CALIDAD TEXTIL Y CONFECCIÓN", "PROGRAMA DE ESPECIALIZACIÓN EN PATRONAJE DIGITAL Y ANIMACIÓN 3D", "TRAZABILIDAD Y GESTIÓN DE MERMAS EN LA INDUSTRIA TEXTIL", "GESTIÓN DE ALMACENES E INVENTARIOS PARA EMPRESAS EXPORTADORAS E IMPORTADORAS"];
@@ -180,7 +193,11 @@ function configurarEventos() {
         btnSubirModulo.onclick = (e) => {
             e.preventDefault();
             const data = recolectarDatosGestion();
+<<<<<<< HEAD
             if(!data.NRC || !data["MODULO/CURSO"]) return alert("⚠️ Complete NRC y Nombre del Módulo");
+=======
+            if(!data.NRC || !data["MODULO-CURSO"]) return alert("⚠️ Complete NRC y Nombre del Módulo");
+>>>>>>> a04f7016686eb0f23a2dc28bc1d4d3a50a4cc3f4
 
             modulosTemporales.push(data);
             actualizarListaVisual();
@@ -238,7 +255,11 @@ window.prepareEditPrograma = async (nombrePrograma) => {
 };
 
 function vaciarCamposModuloControlado(fechaFinRef) {
+<<<<<<< HEAD
     const nom = document.getElementById('f_MODULO/CURSO');
+=======
+    const nom = document.getElementById('f_MODULO-CURSO');
+>>>>>>> a04f7016686eb0f23a2dc28bc1d4d3a50a4cc3f4
     if (nom) nom.value = "";
     if (fechaFinRef) {
         let fBase = new Date(fechaFinRef + "T00:00:00");
@@ -252,7 +273,11 @@ function vaciarCamposModuloControlado(fechaFinRef) {
 
 function actualizarListaVisual() {
     const container = document.getElementById('listaModulosAgregados');
+<<<<<<< HEAD
     container.innerHTML = modulosTemporales.map((mod, i) => `<div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between;"><div><strong>${mod["MODULO/CURSO"]}</strong> (NRC: ${mod.NRC})</div><button type="button" onclick="eliminarMod(${i})" style="color:red; border:none; background:none; cursor:pointer;">🗑️</button></div>`).join('');
+=======
+    container.innerHTML = modulosTemporales.map((mod, i) => `<div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between;"><div><strong>${mod["MODULO-CURSO"]}</strong> (NRC: ${mod.NRC})</div><button type="button" onclick="eliminarMod(${i})" style="color:red; border:none; background:none; cursor:pointer;">🗑️</button></div>`).join('');
+>>>>>>> a04f7016686eb0f23a2dc28bc1d4d3a50a4cc3f4
 }
 window.eliminarMod = (i) => { modulosTemporales.splice(i, 1); actualizarListaVisual(); };
 
@@ -296,8 +321,13 @@ document.getElementById('adminForm').onsubmit = async (e) => {
 
 // EXCEL FUNCTIONS
 document.getElementById('btnDescargarPlantilla').onclick = () => {
+<<<<<<< HEAD
     const head = ["TIPO", "Item", "EMPRESA", "Docente", "AÑO", "PROGRAMA", "EDICIÓN", "MODALIDAD PROGRAMA", "MODULO/CURSO", "MODALIDAD MÓDULO", "MAT-CUR", "NRC Semilla", "NRC", "Horario", "Duracion", "Fecha de inicio", "Fecha de fin", "Precio Sinfo", "#Participantes Objetivo", "#Participantes Real Total", "#Participantes aprobados", "# participantes desertaron", "Software/Aplicativo", "OBS", "curso virtualizado", "Con nota en SINFO?", "Con certificados emitidos?", "Con atributo?_SSADETL", "Con acta de notas_SFASLST", "Con VAEE (SENATI VIRTUAL)"];
     const ws = XLSX.utils.json_to_sheet([{"TIPO":"MÓDULO","PROGRAMA":"EJEMPLO","MODULO/CURSO":"MOD 1","NRC":"00000"}], { header: head });
+=======
+    const head = ["TIPO", "Item", "EMPRESA", "Docente", "AÑO", "PROGRAMA", "EDICIÓN", "MODALIDAD PROGRAMA", "MODULO-CURSO", "MODALIDAD MÓDULO", "MAT-CUR", "NRC Semilla", "NRC", "Horario", "Duracion", "Fecha de inicio", "Fecha de fin", "Precio Sinfo", "#Participantes Objetivo", "#Participantes Real Total", "#Participantes aprobados", "# participantes desertaron", "Software-Aplicativo", "OBS", "curso virtualizado", "Con nota en SINFO?", "Con certificados emitidos?", "Con atributo?_SSADETL", "Con acta de notas_SFASLST", "Con VAEE (SENATI VIRTUAL)"];
+    const ws = XLSX.utils.json_to_sheet([{"TIPO":"MÓDULO","PROGRAMA":"EJEMPLO","MODULO-CURSO":"MOD 1","NRC":"00000"}], { header: head });
+>>>>>>> a04f7016686eb0f23a2dc28bc1d4d3a50a4cc3f4
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Plantilla");
     XLSX.writeFile(wb, "Plantilla_CTTC_2026.xlsx");
@@ -342,7 +372,11 @@ function loadAdminTable() {
             const dt = d.data();
             const label = dt.TIPO === "MÓDULO" ? "[MOD]" : "[CUR]";
             const tr = document.createElement('tr');
+<<<<<<< HEAD
             tr.innerHTML = `<td style="padding:12px;">${dt.NRC || '--'}</td><td style="padding:12px;"><b>${label}</b> ${dt.PROGRAMA || dt["MODULO/CURSO"]}</td><td style="padding:12px;">${dt["Fecha de inicio"] || '--'}</td><td style="text-align:center;"><button onclick="prepareEdit('${d.id}')">✏️</button>${dt.TIPO==="MÓDULO" ? `<button onclick="prepareEditPrograma('${dt.PROGRAMA}')">🏢</button>` : ''}<button onclick="deleteRecord('${d.id}')">🗑️</button></td>`;
+=======
+            tr.innerHTML = `<td style="padding:12px;">${dt.NRC || '--'}</td><td style="padding:12px;"><b>${label}</b> ${dt.PROGRAMA || dt["MODULO-CURSO"]}</td><td style="padding:12px;">${dt["Fecha de inicio"] || '--'}</td><td style="text-align:center;"><button onclick="prepareEdit('${d.id}')">✏️</button>${dt.TIPO==="MÓDULO" ? `<button onclick="prepareEditPrograma('${dt.PROGRAMA}')">🏢</button>` : ''}<button onclick="deleteRecord('${d.id}')">🗑️</button></td>`;
+>>>>>>> a04f7016686eb0f23a2dc28bc1d4d3a50a4cc3f4
             tbody.appendChild(tr);
         });
     });
