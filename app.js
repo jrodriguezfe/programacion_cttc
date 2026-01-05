@@ -3,16 +3,6 @@ import { getFirestore, collection, onSnapshot, query, orderBy, updateDoc, delete
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
-<<<<<<< HEAD
-    apiKey: "AIzaSyB38Wbf0Q9YLz61vxQXVw1oSpMNyPVGy-c",
-    authDomain: "programacion-cttc.firebaseapp.com",
-    projectId: "programacion-cttc",
-    storageBucket: "programacion-cttc.firebasestorage.app",
-    messagingSenderId: "2776502914",
-    appId: "1:2776502914:web:6389898d92d7c4b5ba1a9b"
-};
-
-=======
   apiKey: "AIzaSyB38Wbf0Q9YLz61vxQXVw1oSpMNyPVGy-c",
   authDomain: "programacion-cttc.firebaseapp.com",
   projectId: "programacion-cttc",
@@ -20,7 +10,6 @@ const firebaseConfig = {
   messagingSenderId: "2776502914",
   appId: "1:2776502914:web:6389898d92d7c4b5ba1a9b"
 };
->>>>>>> a04f7016686eb0f23a2dc28bc1d4d3a50a4cc3f4
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
@@ -64,18 +53,6 @@ function loadData() {
         });
 
         // 1. Renderizar Programas
-<<<<<<< HEAD
-        Object.keys(programasMap).forEach(nombreProg => {
-            const modulos = programasMap[nombreProg];
-            const progId = nombreProg.replace(/\s+/g, '-');
-            const trMaster = document.createElement('tr');
-            trMaster.className = 'prog-master-row';
-            trMaster.innerHTML = `<td colspan="6"><strong>📂 PROGRAMA: ${nombreProg}</strong></td><td style="text-align:center;"><span class="badge-prog">PROGRAMA</span></td><td style="text-align:center;">▼ ${modulos.length} Módulos</td>`;
-            trMaster.onclick = () => document.querySelectorAll(`.prog-child-${progId}`).forEach(r => r.classList.toggle('hidden-row'));
-            tbody.appendChild(trMaster);
-            modulos.forEach(m => tbody.appendChild(createDataRow(m, `prog-child-${progId} hidden-row child-row-style`)));
-        });
-=======
         // Dentro de loadData() en app.js
         Object.keys(programasMap).forEach(nombreProg => {
             const modulos = programasMap[nombreProg];
@@ -107,7 +84,6 @@ function loadData() {
             });
         });
         
->>>>>>> a04f7016686eb0f23a2dc28bc1d4d3a50a4cc3f4
 
         // 2. Renderizar Cursos
         independientes.forEach(c => tbody.appendChild(createDataRow(c, 'curso-row-style')));
@@ -121,11 +97,7 @@ function createDataRow(d, className) {
     // Mapeo de los 8 campos solicitados
     tr.innerHTML = `
         <td><strong>${d["Fecha de inicio"] || '-'}</strong></td>
-<<<<<<< HEAD
-        <td>${d["PROGRAMA"] || d["MODULO/CURSO"] || '-'}</td>
-=======
         <td>${d["PROGRAMA"] || d["MODULO-CURSO"] || '-'}</td>
->>>>>>> a04f7016686eb0f23a2dc28bc1d4d3a50a4cc3f4
         <td>${d["Docente"] || '-'}</td>
         <td>${d["Duracion"] || d["Duración"] || '-'}</td>
         <td style="font-size:10px;">${d["Horario"] || '-'}</td>
