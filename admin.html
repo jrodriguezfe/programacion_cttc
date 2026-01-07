@@ -13,7 +13,7 @@
             <div class="brand">CTTC <span>ADMIN</span></div>
             <div class="nav-actions">
                 <span id="adminUser" class="u-name"></span>
-                <button onclick="window.location.href='index.html'" class="btn-primary" style="background: #64748b;">Ver Vista Pública</button>
+                <button onclick="window.location.href='index.html'" class="btn-primary">Ver Vista Pública</button>
                 <button id="btnLogout" class="btn-delete">Cerrar Sesión</button>
             </div>
         </header>
@@ -59,7 +59,10 @@
 
                     <div class="import-guide">
                         <strong>Campos requeridos en el Excel ok:</strong>
-                        <p>Asegúrese de que la primera fila contenga exactamente los nombres de los campos (TIPO, NRC, PROGRAMA, etc.). Use "SI" o "NO" para los indicadores de control.</p>
+                        <p>Asegúrese de incluir las columnas de desglose: 
+                            <strong>Part Programa, Part Curso, Part Beca, Part Pago Programa, Part Pago Curso</strong>. 
+                            El sistema sumará estos valores automáticamente en el campo "Real Total".
+                        </p>
                     </div>
 
                     <small class="help-text">Asegúrese de usar el formato de columnas predefinido.</small>
@@ -77,7 +80,7 @@
                                 <th>NRC</th>
                                 <th>Programa / Curso</th>
                                 <th>Inicio</th>
-                                <th style="text-align: center;">Acciones</th>
+                                <th style="text-align: center;" class="actions-th">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="adminTableBody"></tbody>

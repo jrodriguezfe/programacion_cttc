@@ -1,24 +1,34 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, query, orderBy, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, query, orderBy, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyB38Wbf0Q9YLz61vxQXVw1oSpMNyPVGy-c",
-  authDomain: "programacion-cttc.firebaseapp.com",
-  projectId: "programacion-cttc",
-  storageBucket: "programacion-cttc.firebasestorage.app",
-  messagingSenderId: "2776502914",
-  appId: "1:2776502914:web:6389898d92d7c4b5ba1a9b"
+    apiKey: "AIzaSyB38Wbf0Q9YLz61vxQXVw1oSpMNyPVGy-c",
+    authDomain: "programacion-cttc.firebaseapp.com",
+    projectId: "programacion-cttc",
+    storageBucket: "programacion-cttc.firebasestorage.app",
+    messagingSenderId: "2776502914",
+    appId: "1:2776502914:web:6389898d92d7c4b5ba1a9b"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const colRef = collection(db, "programaciones");
 
+// Configuración de campos
+const CAMPOS_MODAL = ["Part_Programa", "Part_Curso", "Part_Beca", "Part_Pago_Programa", "Part_Pago_Curso"];
+
+// Estado de la aplicación
 let selectedDocId = null;
 let currentMonth = "all";
+let currentDocente = "all";
+let currentPrograma = "all";
+let currentModuloQuery = "";
 let userLogged = null;
+let lastSnapshotData = [];
 
+// --- SEGURIDAD Y CARGA INICIAL ---
 onAuthStateChanged(auth, (user) => {
     userLogged = user;
     const btn = document.getElementById('btnAuthNav');
@@ -29,24 +39,45 @@ onAuthStateChanged(auth, (user) => {
     loadData(); 
 });
 
+// --- GESTIÓN DE DATOS ---
 function loadData() {
     const q = query(colRef, orderBy("Fecha de inicio", "asc"));
-
     onSnapshot(q, (snapshot) => {
+        lastSnapshotData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderFromData(lastSnapshotData);
+    });
+}
+
+function renderFromData(rawData) {
+    try {
         const tbody = document.getElementById('publicTableBody'); 
         if (!tbody) return;
         tbody.innerHTML = '';
 
-        const rawData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        const data = rawData.filter(d => currentMonth === "all" || (d["Fecha de inicio"] || "").split('-')[1] === currentMonth);
-        
-        // Declaramos globalmente en este scope para que createDataRow pueda leerla
-        window.proximosIds = data.slice(0, 3).map(d => d.id);
+        // Filtrado lógico
+        const filtered = rawData.filter(d => {
+            if (currentMonth !== "all" && (d["Fecha de inicio"] || "").split('-')[1] !== currentMonth) return false;
+            if (currentDocente !== 'all') {
+                const docStr = (d.Docente || '').toLowerCase();
+                if (!docStr.includes(currentDocente.toLowerCase())) return false;
+            }
+            if (currentPrograma !== 'all' && (d.PROGRAMA || '').toLowerCase() !== currentPrograma.toLowerCase()) return false;
+            if (currentModuloQuery.trim() !== '') {
+                const q = currentModuloQuery.toLowerCase();
+                const mod = (d['MODULO-CURSO'] || '').toLowerCase();
+                const prog = (d['PROGRAMA'] || '').toLowerCase();
+                if (!mod.includes(q) && !prog.includes(q)) return false;
+            }
+            return true;
+        });
+
+        window.proximosIds = filtered.slice(0, 3).map(d => d.id);
+        populateFilterOptions(rawData);
 
         const programasMap = {};
         const independientes = [];
 
-        data.forEach(item => {
+        filtered.forEach(item => {
             if (item.TIPO === "MÓDULO") {
                 if (!programasMap[item.PROGRAMA]) programasMap[item.PROGRAMA] = [];
                 programasMap[item.PROGRAMA].push(item);
@@ -55,20 +86,14 @@ function loadData() {
             }
         });
 
-        // 1. Renderizar Programas
+        // Renderizado de Programas Agrupados
         Object.keys(programasMap).forEach(nombreProg => {
             const modulos = programasMap[nombreProg];
             const progId = nombreProg.replace(/\s+/g, '-');
-
-            const modulosOrdenados = [...modulos].sort((a, b) => 
-                new Date(a["Fecha de inicio"]) - new Date(b["Fecha de inicio"])
-            );
-
+            const modulosOrdenados = [...modulos].sort((a, b) => new Date(a["Fecha de inicio"]) - new Date(b["Fecha de inicio"]));
             const primerModulo = modulosOrdenados[0];
             const codigoProg = primerModulo["f_CODIGO_PROGRAMA"] || primerModulo["PROGRAMA"] || 'Sin Código';
-            
             const partObjetivoProg = parseInt(primerModulo["#Participantes Objetivo"]) || 0;
-            const partRealProg = parseInt(primerModulo["#Participantes Real Total"]) || 0;
             const duracionTotal = modulos.reduce((acc, m) => acc + (parseInt(m["Duracion"] || m["Duración"]) || 0), 0);
 
             const trMaster = document.createElement('tr');
@@ -76,7 +101,6 @@ function loadData() {
             trMaster.style.cursor = "pointer";
             trMaster.style.backgroundColor = "#f1f5f9"; 
             
-            // Fila Maestra alineada a 9 columnas usando colspan="2"
             trMaster.innerHTML = `
                 <td><strong>${primerModulo["Fecha de inicio"] || '-'}</strong></td>
                 <td colspan="2">
@@ -88,119 +112,157 @@ function loadData() {
                 <td style="font-size:10px;">${primerModulo["Horario"] || '-'}</td>
                 <td style="text-align:center;">---</td>
                 <td style="text-align:center;"><strong>${partObjetivoProg}</strong></td>
-                <td style="text-align:center;"><strong>${partRealProg}</strong></td>
+                <td style="text-align:center;">---</td> 
             `;
 
-            trMaster.onclick = (e) => {
+            trMaster.onclick = () => {
                 const childRows = document.querySelectorAll(`.prog-child-${progId}`);
-                if (e.detail === 2) { 
-                    openQuickEdit(primerModulo.id, primerModulo);
-                } else {
-                    childRows.forEach(row => row.classList.toggle('hidden-row'));
-                }
+                childRows.forEach(row => row.classList.toggle('hidden-row'));
             };
 
             tbody.appendChild(trMaster);
-
-            modulos.forEach(m => {
-                const objIndividual = parseInt(m["#Participantes Objetivo"]) || 0;
-                const realIndividual = parseInt(m["#Participantes Real Total"]) || 0;
-
-                // Lógica de sumatoria heredada para visualización
-                const mVisual = {
-                    ...m,
-                    "#Participantes Objetivo": objIndividual + partObjetivoProg,
-                    "#Participantes Real Total": realIndividual + partRealProg
-                };
-
-                tbody.appendChild(createDataRow(mVisual, `prog-child-${progId} hidden-row child-row-style`));
+            modulosOrdenados.forEach(m => {
+                tbody.appendChild(createDataRow(m, `prog-child-${progId} hidden-row child-row-style`));
             });
         });
 
-        // 2. Cursos Independientes
+        // Renderizado de Cursos Independientes
         independientes.forEach(c => tbody.appendChild(createDataRow(c, 'curso-row-style')));
-    });
+
+    } catch (err) {
+        console.error('Error en renderFromData:', err);
+    }
 }
+
 function createDataRow(d, customClass = '') {
     const tr = document.createElement('tr');
-    
-    // 1. Identificar si es uno de los 3 cursos más próximos para resaltar
-    // proximosIds debe ser calculado en loadData() antes de llamar a esta función
     const esProximo = typeof proximosIds !== 'undefined' && proximosIds.includes(d.id);
-    
-    // 2. Asignar clases: customClass para estructura y highlight-urgent para atención visual
     tr.className = `${customClass} ${esProximo ? 'highlight-urgent' : ''}`;
     tr.style.cursor = "pointer";
-    
-    // 3. Determinar el nombre a mostrar (Prioridad al campo MODULO-CURSO)
     const nombreModuloCurso = d["MODULO-CURSO"] || d["PROGRAMA"] || "---";
 
-    // 4. Mapeo final de las 9 columnas según index.html actualizado:
-    // 1. Fecha | 2. Programa | 3. Módulo-Curso | 4. Docente | 5. Duración | 6. Horario | 7. NRC | 8. Obj | 9. Real
     tr.innerHTML = `
         <td>
             <strong>${d["Fecha de inicio"] || '--'}</strong>
             ${esProximo ? '<br><span class="badge-urgent">PRÓXIMO</span>' : ''}
         </td>
-        <td style="color: #64748b; font-size: 0.85rem;">
-            ${d["PROGRAMA"] || 'CURSO INDEP.'}
-        </td>
-        <td>
-            <strong>${nombreModuloCurso}</strong>
-        </td>
+        <td style="color: #64748b; font-size: 0.85rem;">${d["PROGRAMA"] || 'CURSO INDEP.'}</td>
+        <td><strong>${nombreModuloCurso}</strong></td>
         <td>${d["Docente"] || '--'}</td>
         <td>${d.Duracion || d.Duración || '--'} hrs</td>
         <td style="font-size:10px;">${d.Horario || '--'}</td>
         <td>${d.NRC || '--'}</td>
-        <td style="text-align:center;">
-            ${d["#Participantes Objetivo"] || 0}
-        </td>
-        <td style="text-align:center;">
-            ${d["#Participantes Real Total"] || 0}
-        </td>
+        <td style="text-align:center;">${d["#Participantes Objetivo"] || 0}</td>
+        <td style="text-align:center;">${d["#Participantes Real Total"] || 0}</td>
     `;
-
-    // 5. Vincular evento de click para abrir el modal de edición rápida
     tr.onclick = () => openQuickEdit(d.id, d);
-
     return tr;
 }
 
+// --- GESTIÓN DE FILTROS ---
+function populateFilterOptions(rawData) {
+    const docentesSet = new Set();
+    const programasSet = new Set();
+    rawData.forEach(d => {
+        if (d.Docente) d.Docente.split(',').map(s => s.trim()).forEach(s => { if (s) docentesSet.add(s); });
+        if (d.PROGRAMA) programasSet.add(d.PROGRAMA);
+    });
+
+    const dSel = document.getElementById('docenteFilter');
+    if (dSel) {
+        const val = dSel.value || 'all';
+        dSel.innerHTML = '<option value="all">Todos los docentes</option>' + 
+            Array.from(docentesSet).sort().map(d => `<option value="${d}">${d}</option>`).join('');
+        dSel.value = Array.from(docentesSet).includes(val) ? val : 'all';
+    }
+
+    const pSel = document.getElementById('programaFilter');
+    if (pSel) {
+        const val = pSel.value || 'all';
+        pSel.innerHTML = '<option value="all">Todos los programas</option>' + 
+            Array.from(programasSet).sort().map(p => `<option value="${p}">${p}</option>`).join('');
+        pSel.value = Array.from(programasSet).includes(val) ? val : 'all';
+    }
+}
+
+// --- MODAL DE EDICIÓN RÁPIDA ---
 function openQuickEdit(id, data) {
     selectedDocId = id;
     const modal = document.getElementById('quickEditModal');
-    const input = document.getElementById('inpRealTotal');
+    document.getElementById('courseNameTitle').textContent = data["MODULO-CURSO"] || data["PROGRAMA"] || "Sin nombre";
+
+    let sumaActual = 0;
+    CAMPOS_MODAL.forEach(campo => {
+        const idInput = `q_${campo.replace(/ /g, "_")}`;
+        const inputEl = document.getElementById(idInput);
+        if (inputEl) {
+            const valor = parseInt(data[campo] || data[campo.replace(/_/g, " ")] || 0);
+            inputEl.value = valor;
+            sumaActual += valor;
+        }
+    });
+
+    document.getElementById('q_Total_Calculado').textContent = sumaActual;
     const adminActions = document.getElementById('modalAdminActions');
-
-    // Prioridad: Si tiene MODULO-CURSO lo muestra, si no, usa el nombre del PROGRAMA
-    const nombreAMostrar = data["MODULO-CURSO"] || data["PROGRAMA"] || "Sin nombre";
-    document.getElementById('courseNameTitle').textContent = nombreAMostrar;
+    const inputs = modal.querySelectorAll('.q-input');
     
-    input.value = data["#Participantes Real Total"] || 0;
+    inputs.forEach(i => i.disabled = !userLogged);
+    if (adminActions) userLogged ? adminActions.classList.remove('hidden') : adminActions.classList.add('hidden');
 
-    if (!userLogged) {
-        input.disabled = true;
-        if (adminActions) adminActions.classList.add('hidden');
-    } else {
-        input.disabled = false;
-        if (adminActions) adminActions.classList.remove('hidden');
-    }
     modal.classList.remove('hidden');
 }
 
-document.getElementById('btnSaveQuick').onclick = async () => {
-    if (!userLogged || !selectedDocId) return;
-    await updateDoc(doc(db, "programaciones", selectedDocId), { "#Participantes Real Total": document.getElementById('inpRealTotal').value });
-    closeModal();
+// Inicializar eventos de inputs del modal para suma en tiempo real
+CAMPOS_MODAL.forEach(campo => {
+    const idInput = `q_${campo.replace(/ /g, "_")}`;
+    const el = document.getElementById(idInput);
+    if (el) {
+        el.addEventListener('input', () => {
+            let nuevoTotal = 0;
+            CAMPOS_MODAL.forEach(c => {
+                const idC = `q_${c.replace(/ /g, "_")}`;
+                nuevoTotal += parseInt(document.getElementById(idC).value || 0);
+            });
+            document.getElementById('q_Total_Calculado').textContent = nuevoTotal;
+        });
+    }
+});
+
+const btnSaveQuick = document.getElementById('btnSaveQuick');
+if (btnSaveQuick) {
+    btnSaveQuick.onclick = async () => {
+        if (!userLogged || !selectedDocId) return;
+        const updates = {};
+        let totalReal = 0;
+        CAMPOS_MODAL.forEach(campo => {
+            const val = parseInt(document.getElementById(`q_${campo}`).value || 0);
+            updates[campo.replace(/_/g, " ")] = val;
+            totalReal += val;
+        });
+        updates["#Participantes Real Total"] = totalReal;
+        try {
+            await updateDoc(doc(db, "programaciones", selectedDocId), updates);
+            closeModal();
+            alert("✅ Cantidades actualizadas correctamente.");
+        } catch (e) { alert("Error: " + e.message); }
+    };
+}
+
+const closeModal = () => { 
+    document.getElementById('quickEditModal').classList.add('hidden'); 
+    selectedDocId = null; 
 };
 
-document.getElementById('btnDeleteQuick').onclick = async () => {
-    if (!userLogged || !confirm("¿Eliminar permanentemente?")) return;
-    await deleteDoc(doc(db, "programaciones", selectedDocId));
-    closeModal();
-};
-
-const closeModal = () => { document.getElementById('quickEditModal').classList.add('hidden'); selectedDocId = null; };
 document.getElementById('btnCloseModal').onclick = closeModal;
-const filter = document.getElementById('monthFilter');
-if (filter) filter.onchange = (e) => { currentMonth = e.target.value; loadData(); };
+
+// Eventos de Filtros
+document.getElementById('monthFilter').onchange = (e) => { currentMonth = e.target.value; renderFromData(lastSnapshotData); };
+document.getElementById('docenteFilter').onchange = (e) => { currentDocente = e.target.value; renderFromData(lastSnapshotData); };
+document.getElementById('programaFilter').onchange = (e) => { currentPrograma = e.target.value; renderFromData(lastSnapshotData); };
+document.getElementById('moduloFilter').oninput = (e) => { currentModuloQuery = e.target.value; renderFromData(lastSnapshotData); };
+
+// Cerrar modal al clickear fuera
+window.onclick = (e) => {
+    const modal = document.getElementById('quickEditModal');
+    if (e.target === modal) closeModal();
+};

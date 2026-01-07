@@ -24,13 +24,15 @@ let selectedDocId = null;
 let modulosTemporales = []; 
 window.editandoProgramaActivo = null;
 
+const CAMPOS_SUMATORIA = ["Part_Programa", "Part_Curso", "Part_Beca", "Part_Pago_Programa", "Part_Pago_Curso"];
 const FERIADOS_2026 = ["2026-01-01", "2026-04-02", "2026-04-03", "2026-05-01", "2026-06-07", "2026-06-29", "2026-07-23", "2026-07-28", "2026-07-29", "2026-08-06", "2026-08-30", "2026-10-08", "2026-11-01", "2026-12-08", "2026-12-09", "2026-12-25"];
 const CAMPOS_CABECERA = ["Item", "EMPRESA", "Docente", "AÑO", "PROGRAMA", "EDICIÓN", "MODALIDAD PROGRAMA"];
-const CAMPOS_GESTION = ["MODULO-CURSO", "MODALIDAD MÓDULO", "MAT-CUR", "NRC Semilla", "NRC", "Horario", "Duracion", "Fecha de inicio", "Fecha de fin", "Precio Sinfo", "#Participantes Objetivo", "#Participantes Real Total", "#Participantes aprobados", "# participantes desertaron", "Software-Aplicativo", "OBS"];
+const CAMPOS_GESTION = ["Modulo Orden","MODULO-CURSO", "MODALIDAD MÓDULO", "MAT-CUR", "NRC Semilla", "NRC", "Horario", "Duracion", "Fecha de inicio", "Fecha de fin", "Precio Sinfo", "#Participantes Objetivo", "#Participantes Real Total", "Part_Programa", "Part_Curso", "Part_Beca", "Part_Pago_Programa", "Part_Pago_Curso","#Participantes aprobados", "# participantes desertaron", "Software-Aplicativo", "OBS"];
 const CAMPOS_CHECKBOX = ["curso virtualizado", "Con nota en SINFO?", "Con certificados emitidos?", "Con atributo?_SSADETL", "Con acta de notas_SFASLST", "Con VAEE (SENATI VIRTUAL)"];
 const DOCENTES = ["ANDRES CCOCA", "CARMELON GONZALES", "JONATAN BEGAZO", "JORGE CAYCHO", "LUIS QUELOPANA", "MARCO POLO", "MARIA PEREZ", "MARTA LAURA", "MARTHA MAYTA", "NANCY PACHECO", "RICARDO MORENO", "ROBERT CALDERON", "VICTOR HUAMANÍ", "VICTOR GASTAÑETA"];
 const PROGRAMAS_NOMBRES = ["CURSO", "PROGRAMA DE GESTIÓN PARA LA FORMACIÓN DE PATRONISTAS DIGITALES", "ASISTENTE EN DISEÑO DE MODAS", "PROGRAMA DE GESTIÓN PARA FORMACIÓN DE AUDITORES DE CALIDAD TEXTIL Y CONFECCIÓN", "PROGRAMA DE ESPECIALIZACIÓN EN PATRONAJE DIGITAL Y ANIMACIÓN 3D", "TRAZABILIDAD Y GESTIÓN DE MERMAS EN LA INDUSTRIA TEXTIL", "GESTIÓN DE ALMACENES E INVENTARIOS PARA EMPRESAS EXPORTADORAS E IMPORTADORAS"];
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+
 
 // 2. INICIO Y SEGURIDAD
 onAuthStateChanged(auth, (user) => {
@@ -183,10 +185,41 @@ function configurarEventos() {
     document.addEventListener('click', (e) => { 
         if(e.target.classList.contains('btn-dia')) setTimeout(calcularFechaFin, 100); 
     });
+
+    // --- INTERCAMBIO DE FECHAS POR NÚMERO DE MÓDULO ---
+    document.getElementById('f_Modulo_Orden')?.addEventListener('change', (e) => {
+        const nuevoOrden = parseInt(e.target.value);
+        // Busca si el número ya existe en los módulos que estás agregando actualmente
+        const existente = modulosTemporales.find(m => parseInt(m["Modulo Orden"]) === nuevoOrden);
+        
+        if (existente) {
+            document.getElementById('f_Fecha_de_inicio').value = existente["Fecha de inicio"];
+            calcularFechaFin();
+            alert(`Sincronizado: Se ha tomado la fecha de inicio del Módulo ${nuevoOrden}`);
+        }
+    });
+
+    // --- SUMA AUTOMÁTICA DE PARTICIPANTES ---
+    const totalInput = document.getElementById('f_#Participantes_Real_Total');
+    if (totalInput) totalInput.readOnly = true;
+
+    CAMPOS_SUMATORIA.forEach(campo => {
+        const input = document.getElementById(`f_${campo}`);
+        input?.addEventListener('input', () => {
+            let suma = 0;
+            CAMPOS_SUMATORIA.forEach(c => {
+                suma += parseInt(document.getElementById(`f_${c}`)?.value || 0);
+            });
+            if (totalInput) totalInput.value = suma;
+        });
+    });
     
-    // CORRECCIÓN BOTÓN AGREGAR (SOLUCIÓN AL LAG)
     const btnSubirModulo = document.getElementById('btnSubirModulo');
     if (btnSubirModulo) {
+        // Sugerir número de módulo automático al preparar la subida
+        const inputOrden = document.getElementById('f_Modulo_Orden');
+        if (inputOrden) inputOrden.value = modulosTemporales.length + 1;
+
         btnSubirModulo.onclick = (e) => {
             e.preventDefault();
             const data = recolectarDatosGestion();
@@ -198,6 +231,9 @@ function configurarEventos() {
             
             const item = document.getElementById('f_Item');
             if(item) item.value = parseInt(item.value) + 1;
+
+            // Actualizar el sugerido para el siguiente módulo
+            if (inputOrden) inputOrden.value = modulosTemporales.length + 1;
         };
     }
 }
@@ -242,23 +278,73 @@ function recolectarDatosGestion() {
 window.prepareEditPrograma = async (nombrePrograma) => {
     if(!nombrePrograma) return;
     try {
-        const q = query(colRef, where("PROGRAMA", "==", nombrePrograma), limit(1));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-            const data = querySnapshot.docs[0].data();
-            document.getElementById('regType').value = "PROGRAMA";
-            document.getElementById('regType').dispatchEvent(new Event('change'));
+        // 1. Cargar datos de la Cabecera (del primer registro encontrado)
+        const qCabecera = query(colRef, where("PROGRAMA", "==", nombrePrograma), limit(1));
+        const snapCabecera = await getDocs(qCabecera);
+        
+        if (!snapCabecera.empty) {
+            const data = snapCabecera.docs[0].data();
+            
+            // Cambiar el tipo de registro a PROGRAMA para mostrar los campos correctos
+            const regTypeSelect = document.getElementById('regType');
+            regTypeSelect.value = "PROGRAMA";
+            regTypeSelect.dispatchEvent(new Event('change'));
+            
+            // --- MAPEO DE CAMPOS CABECERA ---
             CAMPOS_CABECERA.forEach(c => {
-                const el = document.getElementById(`f_${c.replace(/ /g, "_")}`);
-                if (el) el.value = data[c] || "";
+                const idHTML = `f_${c.replace(/ /g, "_")}`;
+                const el = document.getElementById(idHTML);
+                if (el) {
+                    // Lógica de prioridad para nombres de campos
+                    if (c === "f_CODIGO_PROGRAMA") {
+                        el.value = data["f_CODIGO_PROGRAMA"] || data["CODIGO-PROGRAMA"] || "";
+                    } else {
+                        el.value = data[c] || "";
+                    }
+                }
             });
+
+            // --- CARGA MANUAL DE CAMPOS CRÍTICOS (Faltantes) ---
+            // Estos campos a veces no están en CAMPOS_CABECERA pero son necesarios
+            const extraMappings = {
+                "f_Horario": data["Horario"],
+                "f_Fecha_de_inicio": data["Fecha de inicio"],
+                "f_Part_Programa": data["Part Programa"] || data["Part_Programa"],
+                "f_CODIGO_PROGRAMA": data["f_CODIGO_PROGRAMA"] || data["CODIGO-PROGRAMA"]
+            };
+
+            for (const [id, valor] of Object.entries(extraMappings)) {
+                const el = document.getElementById(id);
+                if (el && valor !== undefined) el.value = valor;
+            }
+
+            // 2. Recuperar y cargar todos los Módulos componentes
+            const qModulos = query(colRef, 
+                where("PROGRAMA", "==", nombrePrograma), 
+                where("TIPO", "==", "MÓDULO"), 
+                orderBy("Fecha de inicio", "asc")
+            );
+            const snapModulos = await getDocs(qModulos);
+            
+            modulosTemporales = [];
+            snapModulos.forEach(docModulo => {
+                modulosTemporales.push({ id: docModulo.id, ...docModulo.data() });
+            });
+
+            // Actualizar la interfaz
+            actualizarListaVisual();
+
             window.editandoProgramaActivo = nombrePrograma;
             const btnSave = document.getElementById('btnSubmitMain');
-            btnSave.textContent = "ACTUALIZAR CABECERA (TODO EL PROGRAMA)";
+            btnSave.textContent = "ACTUALIZAR PROGRAMA COMPLETO";
             btnSave.style.background = "#0369a1";
+            
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-    } catch (error) { console.error(error); }
+    } catch (error) { 
+        console.error("Error al recuperar programa:", error); 
+        alert("Error al cargar los componentes del programa.");
+    }
 };
 
 function vaciarCamposModuloControlado(fechaFinRef) {
@@ -285,43 +371,142 @@ document.getElementById('adminForm').onsubmit = async (e) => {
     e.preventDefault();
     const tipo = document.getElementById('regType').value;
 
+    // --- 1. LÓGICA DE DETECCIÓN PARA REPROGRAMACIÓN EN CASCADA ---
+    let diffDiasUtiles = 0;
+    let programaParaCascada = null;
+    let ordenActual = 0;
+
+    // Solo verificamos cascada si estamos editando un registro individual que ya existe en DB
+    if (selectedDocId && !window.editandoProgramaActivo) {
+        const snapAnterior = await getDoc(doc(db, "programaciones", selectedDocId));
+        if (snapAnterior.exists()) {
+            const dataAnt = snapAnterior.data();
+            const fechaNueva = document.getElementById('f_Fecha_de_inicio').value;
+            const fechaVieja = dataAnt["Fecha de inicio"];
+
+            // Si la fecha cambió y es un MÓDULO, calculamos el desplazamiento
+            if (fechaNueva !== fechaVieja && dataAnt.TIPO === "MÓDULO") {
+                const d1 = new Date(fechaVieja + "T00:00:00");
+                const d2 = new Date(fechaNueva + "T00:00:00");
+                const diffMilis = d2 - d1;
+                // Diferencia en días calendario (la función calcularDesplazamientoFecha se encargará de los útiles)
+                diffDiasUtiles = Math.round(diffMilis / (1000 * 60 * 60 * 24));
+                
+                programaParaCascada = dataAnt.PROGRAMA;
+                ordenActual = parseInt(dataAnt["Modulo Orden"]) || 0;
+            }
+        }
+    }
+
+    // --- 2. CASO: EDICIÓN DE PROGRAMA COMPLETO (DESDE EL MODAL DEL INDEX) ---
     if (window.editandoProgramaActivo) {
         try {
             const batch = writeBatch(db);
             const nCabecera = {};
-            CAMPOS_CABECERA.forEach(c => { nCabecera[c] = document.getElementById(`f_${c.replace(/ /g, "_")}`).value; });
-            const q = query(colRef, where("PROGRAMA", "==", window.editandoProgramaActivo));
-            const snap = await getDocs(q);
-            snap.forEach(d => batch.update(d.ref, nCabecera));
+            // Recolectar datos de cabecera comunes a todos los módulos
+            CAMPOS_CABECERA.forEach(c => { 
+                const el = document.getElementById(`f_${c.replace(/ /g, "_")}`);
+                if (el) nCabecera[c] = el.value; 
+            });
+
+            // Actualizar o crear cada módulo en la lista temporal
+            for (const m of modulosTemporales) {
+                if (m.id) {
+                    const docRef = doc(db, "programaciones", m.id);
+                    batch.update(docRef, { ...nCabecera, ...m });
+                } else {
+                    const newRef = doc(collection(db, "programaciones"));
+                    batch.set(newRef, { ...nCabecera, ...m, TIPO: "MÓDULO", timestamp: new Date() });
+                }
+            }
+            
             await batch.commit();
-            alert("✅ Programa actualizado.");
+            alert("✅ Programa y todos sus módulos actualizados correctamente.");
             location.reload();
             return;
-        } catch (err) { alert(err.message); return; }
+        } catch (err) { 
+            console.error("Error en batch update:", err);
+            alert("Error al actualizar programa: " + err.message); 
+            return; 
+        }
     }
 
-    if (tipo === "PROGRAMA" && modulosTemporales.length === 0) return alert("Agregue módulos.");
+    // --- 3. CASO: NUEVA PUBLICACIÓN O EDICIÓN INDIVIDUAL ---
+    if (tipo === "PROGRAMA" && modulosTemporales.length === 0) {
+        return alert("⚠️ Debe agregar al menos un módulo para publicar un Programa.");
+    }
+    
     try {
         const cab = {};
-        CAMPOS_CABECERA.forEach(c => { cab[c] = document.getElementById(`f_${c.replace(/ /g, "_")}`).value; });
+        CAMPOS_CABECERA.forEach(c => { 
+            const el = document.getElementById(`f_${c.replace(/ /g, "_")}`);
+            if (el) cab[c] = el.value; 
+        });
+        
+        const gestionData = recolectarDatosGestion();
+
         if (tipo === "PROGRAMA") {
-            for (const m of modulosTemporales) { await addDoc(colRef, { ...cab, ...m, TIPO: "MÓDULO", timestamp: new Date() }); }
-            alert("✅ Programa publicado.");
+            // Publicar múltiples módulos nuevos
+            for (const m of modulosTemporales) { 
+                await addDoc(colRef, { ...cab, ...m, TIPO: "MÓDULO", timestamp: new Date() }); 
+            }
+            alert("✅ Programa publicado con éxito.");
         } else if (selectedDocId) {
-            await updateDoc(doc(db, "programaciones", selectedDocId), { ...cab, ...recolectarDatosGestion(), timestamp: new Date() });
-            alert("✅ Registro actualizado.");
+            // ACTUALIZAR REGISTRO INDIVIDUAL
+            
+            // Si se detectó cambio de fecha, ejecutar el efecto dominó primero
+            if (programaParaCascada && diffDiasUtiles !== 0) {
+                await ejecutarCascadaProgramas(programaParaCascada, ordenActual, diffDiasUtiles);
+            }
+
+            await updateDoc(doc(db, "programaciones", selectedDocId), { 
+                ...cab, 
+                ...gestionData, 
+                timestamp: new Date() 
+            });
+            alert("✅ Registro actualizado. Se han movido las fechas de los módulos siguientes si correspondía.");
         } else {
-            await addDoc(colRef, { ...cab, ...recolectarDatosGestion(), TIPO: "CURSO", timestamp: new Date() });
-            alert("✅ Curso publicado.");
+            // Crear un curso independiente (CURSO)
+            await addDoc(colRef, { ...cab, ...gestionData, TIPO: "CURSO", timestamp: new Date() });
+            alert("✅ Curso publicado con éxito.");
         }
         location.reload();
-    } catch (err) { alert(err.message); }
+    } catch (err) { 
+        console.error("Error al guardar:", err);
+        alert("Error: " + err.message); 
+    }
 };
 
 // EXCEL FUNCTIONS
 document.getElementById('btnDescargarPlantilla').onclick = () => {
-    const head = ["TIPO", "Item", "EMPRESA", "Docente", "AÑO", "PROGRAMA", "EDICIÓN", "MODALIDAD PROGRAMA", "MODULO-CURSO", "MODALIDAD MÓDULO", "MAT-CUR", "NRC Semilla", "NRC", "Horario", "Duracion", "Fecha de inicio", "Fecha de fin", "Precio Sinfo", "#Participantes Objetivo", "#Participantes Real Total", "#Participantes aprobados", "# participantes desertaron", "Software-Aplicativo", "OBS", "curso virtualizado", "Con nota en SINFO?", "Con certificados emitidos?", "Con atributo?_SSADETL", "Con acta de notas_SFASLST", "Con VAEE (SENATI VIRTUAL)"];
-    const ws = XLSX.utils.json_to_sheet([{"TIPO":"MÓDULO","PROGRAMA":"EJEMPLO","MODULO-CURSO":"MOD 1","NRC":"00000"}], { header: head });
+    // Lista actualizada con los 5 nuevos campos de participantes
+    const head = [
+        "TIPO", "Item", "EMPRESA", "Docente", "AÑO", "PROGRAMA", "EDICIÓN", 
+        "MODALIDAD PROGRAMA", "MODULO-CURSO", "MODALIDAD MÓDULO", "MAT-CUR", 
+        "NRC Semilla", "NRC", "Horario", "Duracion", "Fecha de inicio", 
+        "Fecha de fin", "Precio Sinfo", "#Participantes Objetivo", 
+        "Part Programa", "Part Curso", "Part Beca", "Part Pago Programa", "Part Pago Curso", // Campos nuevos
+        "#Participantes Real Total", "#Participantes aprobados", 
+        "# participantes desertaron", "Software-Aplicativo", "OBS", 
+        "curso virtualizado", "Con nota en SINFO?", "Con certificados emitidos?", 
+        "Con atributo?_SSADETL", "Con acta de notas_SFASLST", "Con VAEE (SENATI VIRTUAL)"
+    ];
+
+    // Se incluye una fila de ejemplo con valores en 0 para los nuevos campos
+    const ejemplo = {
+        "TIPO": "MÓDULO",
+        "PROGRAMA": "EJEMPLO",
+        "MODULO-CURSO": "MOD 1",
+        "NRC": "00000",
+        "Part Programa": 0,
+        "Part Curso": 0,
+        "Part Beca": 0,
+        "Part Pago Programa": 0,
+        "Part Pago Curso": 0,
+        "#Participantes Real Total": 0
+    };
+
+    const ws = XLSX.utils.json_to_sheet([ejemplo], { header: head });
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Plantilla");
     XLSX.writeFile(wb, "Plantilla_CTTC_2026.xlsx");
@@ -362,15 +547,128 @@ function loadAdminTable() {
     if (!tbody) return;
     onSnapshot(query(colRef, orderBy("timestamp", "desc")), (snap) => {
         tbody.innerHTML = '';
-        snap.forEach((d) => {
-            const dt = d.data();
-            const label = dt.TIPO === "MÓDULO" ? "[MOD]" : "[CUR]";
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // Separar cursos y módulos
+        const modules = docs.filter(d => d.TIPO === "MÓDULO");
+        const courses = docs.filter(d => d.TIPO !== "MÓDULO");
+
+        // Agrupar módulos por programa
+        const progMap = {};
+        modules.forEach(m => {
+            const prog = m.PROGRAMA || 'Sin Programa';
+            if (!progMap[prog]) progMap[prog] = [];
+            progMap[prog].push(m);
+        });
+
+        // Renderizar programas con controles para expandir/contraer
+
+        Object.keys(progMap).sort().forEach(progName => {
+            const progId = progName.replace(/\s+/g, '-').replace(/[^a-z0-9\-_]/gi, '').toLowerCase();
+            
+            // --- NUEVO: ORDENAR MÓDULOS POR NÚMERO DE ORDEN ---
+            // Esto asegura que la secuencia 1, 2, 3... se respete visualmente
+            progMap[progName].sort((a, b) => (parseInt(a["Modulo Orden"]) || 0) - (parseInt(b["Modulo Orden"]) || 0));
+
+            const trProg = document.createElement('tr');
+            trProg.className = 'prog-master-row';
+            trProg.innerHTML = `
+                <td style="padding:12px;">-</td>
+                <td style="padding:12px;">
+                    <button class="expand-btn" data-prog="${progId}" aria-expanded="false">▸</button> 
+                    <b>${progName}</b> 
+                    <small style="color:var(--text-muted);">(${progMap[progName].length} módulos)</small>
+                </td>
+                <td style="padding:12px;">-</td>
+                <td class="actions-col" style="text-align:center; padding:12px;">
+                    <button class="action-button" onclick="toggleProgram('${progId}')">Ver</button>
+                    <button class="action-button" onclick="prepareEditPrograma('${progName}')" style="background:#0ea5e9; margin-left:5px;">Editar Prog.</button>
+                </td>
+            `;
+            tbody.appendChild(trProg);
+
+            // Enlazamos el manejador directamente al botón de expandir para evitar dependencias de re-query global
+            const expandBtnLocal = trProg.querySelector('.expand-btn');
+            if (expandBtnLocal) {
+                expandBtnLocal.onclick = () => {
+                    const progIdBtn = expandBtnLocal.getAttribute('data-prog');
+                    const expanded = expandBtnLocal.getAttribute('aria-expanded') === 'true';
+                    expandBtnLocal.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+                    expandBtnLocal.textContent = expanded ? '▸' : '▾';
+                    document.querySelectorAll(`.prog-child-${progIdBtn}`).forEach(r => r.classList.toggle('hidden-row'));
+                };
+            }
+
+            progMap[progName].forEach(m => {
+                const tr = document.createElement('tr');
+                tr.className = `child-row-style prog-child-${progId} hidden-row`;
+                
+                // Se añade el número de módulo al nombre para mayor claridad visual
+                const nombreModulo = m["Modulo Orden"] ? `[Mód. ${m["Modulo Orden"]}] ${m["MODULO-CURSO"]}` : m["MODULO-CURSO"];
+
+                tr.innerHTML = `
+                    <td style="padding:12px;">${m.NRC || '--'}</td>
+                    <td style="padding:12px; padding-left: 30px;">${nombreModulo}</td>
+                    <td style="padding:12px;">${m["Fecha de inicio"] || '--'}</td>
+                    <td class="actions-col" style="text-align:center; padding:12px;">
+                        <button class="action-button" onclick="prepareEdit('${m.id}')">✏️</button> 
+                        <button class="action-button delete" onclick="deleteRecord('${m.id}')">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        });
+
+        // Renderizar cursos sueltos
+        courses.forEach(c => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td style="padding:12px;">${dt.NRC || '--'}</td><td style="padding:12px;"><b>${label}</b> ${dt.PROGRAMA || dt["MODULO-CURSO"]}</td><td style="padding:12px;">${dt["Fecha de inicio"] || '--'}</td><td style="text-align:center;"><button onclick="prepareEdit('${d.id}')">✏️</button>${dt.TIPO==="MÓDULO" ? `<button onclick="prepareEditPrograma('${dt.PROGRAMA}')">🏢</button>` : ''}<button onclick="deleteRecord('${d.id}')">🗑️</button></td>`;
+            tr.innerHTML = `
+                <td style="padding:12px;">${c.NRC || '--'}</td>
+                <td style="padding:12px;"><b>[CUR]</b> ${c.PROGRAMA || c["MODULO-CURSO"]}</td>
+                <td style="padding:12px;">${c["Fecha de inicio"] || '--'}</td>
+                <td class="actions-col" style="text-align:center; padding:12px;"><button class="action-button" onclick="prepareEdit('${c.id}')">✏️</button> <button class="action-button delete" onclick="deleteRecord('${c.id}')">🗑️</button></td>
+            `;
             tbody.appendChild(tr);
+        });
+
+        // Asignar control de expand/colapso
+        document.querySelectorAll('.expand-btn').forEach(btn => {
+            btn.onclick = () => {
+                const progId = btn.getAttribute('data-prog');
+                const expanded = btn.getAttribute('aria-expanded') === 'true';
+                btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+                btn.textContent = expanded ? '▸' : '▾';
+                document.querySelectorAll(`.prog-child-${progId}`).forEach(r => r.classList.toggle('hidden-row'));
+            };
         });
     });
 }
+
+window.toggleProgram = (progId) => {
+    try {
+        const rows = Array.from(document.querySelectorAll(`.prog-child-${progId}`));
+        // Si no hay filas, no hacemos nada
+        if (rows.length === 0) return;
+
+        // Determinamos si actualmente están ocultas (si al menos una lo está)
+        const anyHidden = rows.some(r => r.classList.contains('hidden-row'));
+
+        // Aplicamos la acción: mostrar si estaban ocultas, ocultar si estaban visibles
+        rows.forEach(r => {
+            if (anyHidden) r.classList.remove('hidden-row');
+            else r.classList.add('hidden-row');
+        });
+
+        // Sincronizamos el botón de expandir para reflejar el estado
+        const masterBtn = document.querySelector(`.prog-master-row .expand-btn[data-prog="${progId}"]`);
+        if (masterBtn) {
+            masterBtn.setAttribute('aria-expanded', anyHidden ? 'true' : 'false');
+            masterBtn.textContent = anyHidden ? '▾' : '▸';
+        }
+    } catch (err) {
+        console.error('toggleProgram error:', err);
+    }
+};
 
 window.deleteRecord = async (id) => { if (confirm("¿Eliminar?")) await deleteDoc(doc(db, "programaciones", id)); };
 window.prepareEdit = async (id) => {
@@ -386,9 +684,88 @@ window.prepareEdit = async (id) => {
             const el = document.getElementById(`f_${c.replace(/ /g, "_")}`);
             if (el) el.checked = dt[c] === "SI";
         });
+
+        // 3. RECONSTRUIR HORARIO VISUAL (si existe en el documento)
+        if (dt.Horario) {
+            rellenarHorarioVisual(dt.Horario);
+        }
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 };
+
+
+function rellenarHorarioVisual(horarioStr) {
+    if (!horarioStr || typeof horarioStr !== 'string') return;
+
+    // 1. Asegurarse de que los bloques estén creados según la modalidad actual
+    const modalidad = document.getElementById('f_MODALIDAD_MÓDULO')?.value || "Online";
+    updateHorarioUI(modalidad);
+
+    // 2. Separar los bloques (usualmente divididos por " | ")
+    const bloques = horarioStr.split(' | ');
+
+    bloques.forEach(bloqueTexto => {
+        if (!bloqueTexto.trim()) return;
+
+        // Extraer partes: "BLOQUE: ONLINE: Lun-Mar (08:00 a 10:00)"
+        const match = bloqueTexto.match(/BLOQUE: (.*?): (.*?) \((.*?) a (.*?)\)/);
+        if (match) {
+            const [_, tipo, diasStr, horaIni, horaFin] = match;
+            const diasArray = diasStr.split('-').map(s => s.trim());
+
+            // Buscar el contenedor del bloque correcto (Online o Presencial)
+            document.querySelectorAll('.horario-bloque').forEach(bloqueEl => {
+                const titulo = bloqueEl.querySelector('p')?.textContent || '';
+
+                if (titulo.includes(tipo)) {
+                    // Marcar días
+                    bloqueEl.querySelectorAll('.btn-dia').forEach(btn => {
+                        if (diasArray.includes(btn.textContent)) {
+                            btn.classList.add('active');
+                        } else {
+                            btn.classList.remove('active');
+                        }
+                    });
+                    // Rellenar horas
+                    const inputIni = bloqueEl.querySelector('.t-ini');
+                    const inputFin = bloqueEl.querySelector('.t-fin');
+                    if (inputIni) inputIni.value = horaIni;
+                    if (inputFin) inputFin.value = horaFin;
+                }
+            });
+        }
+    });
+}
+
+
+async function ejecutarCascadaProgramas(nombrePrograma, ordenActual, diasMover) {
+    if (diasMover === 0) return;
+
+    // Consultamos los módulos del mismo programa con orden superior
+    const q = query(
+        colRef, 
+        where("PROGRAMA", "==", nombrePrograma),
+        where("Modulo Orden", ">", ordenActual)
+    );
+    
+    const snap = await getDocs(q);
+    const batch = writeBatch(db);
+
+    snap.forEach(docSnap => {
+        const data = docSnap.data();
+        const fechaBase = data["Fecha de inicio"];
+        // Usamos tu función existente para saltar domingos y feriados
+        const nuevaFecha = calcularDesplazamientoFecha(fechaBase, diasMover);
+        
+        batch.update(doc(db, "programaciones", docSnap.id), {
+            "Fecha de inicio": nuevaFecha
+        });
+    });
+
+    await batch.commit();
+}
+
 
 document.getElementById('btnFinalizar').onclick = () => location.reload();
 document.getElementById('btnLogout').onclick = () => signOut(auth);

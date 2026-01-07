@@ -41,14 +41,85 @@ body {
 .brand { font-size: 1.25rem; font-weight: 800; color: var(--primary-dark); }
 .brand span { color: var(--primary-green); }
 
+/* --- HEADER / NAV ACTIONS (botones a la derecha) --- */
+.nav-actions { display:flex; align-items:center; gap:12px; }
+.u-name { font-weight:700; color: var(--text-muted); font-size: 0.95rem; padding: 6px 10px; border-radius: 8px; }
+
+/* Botón principal (Ver Vista Pública) */
+.nav-actions .btn-primary { background: var(--senati-blue); color: white; padding: 8px 12px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; }
+.nav-actions .btn-primary:hover { filter: brightness(0.95); }
+
+/* Botón de cierre de sesión */
+.nav-actions .btn-delete { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+.nav-actions .btn-delete:hover { background: #fff; box-shadow: var(--shadow); }
+
 /* --- SISTEMA DE PESTAÑAS --- */
+/* Contenedor principal de controles */
 .controls-wrapper {
-    display: flex;
-    justify-content: space-between;
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 25px;
+    border: 1px solid #e2e8f0;
+}
+
+/* Grilla para los filtros */
+.filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
     align-items: center;
-    margin-top: 1.5rem;
-    flex-wrap: wrap;
-    gap: 1rem;
+}
+
+/* Estilo para los selects y el input de búsqueda */
+.custom-select, 
+.search-input {
+    width: 100%;
+    padding: 10px 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background-color: #f8fafc;
+    color: #334155;
+    font-size: 0.9rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+/* Efecto Focus para resaltar el filtro activo */
+.custom-select:focus, 
+.search-input:focus {
+    border-color: #0ea5e9;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+}
+
+/* Estilo específico para el input de búsqueda */
+.search-input {
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="%2364748b"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>');
+    background-repeat: no-repeat;
+    background-position: 12px center;
+    background-size: 18px;
+    padding-left: 40px;
+}
+
+/* Labels informativos opcionales (si decides agregarlos al HTML) */
+.filter-group label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+/* Responsividad para móviles */
+@media (max-width: 768px) {
+    .filters {
+        grid-template-columns: 1fr; /* Un filtro por fila en celulares */
+    }
 }
 
 .tabs-navigation {
@@ -318,6 +389,15 @@ th, td {
     display: none !important;
 }
 
+/* Botón de expandir: más claramente clicable */
+.expand-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 6px;
+}
+
 /* Estilo para las filas de módulos (hijos) */
 .child-row-style {
     background-color: #f9fafb; /* Color ligeramente distinto */
@@ -327,6 +407,50 @@ th, td {
     padding-left: 2rem; /* Indentación para efecto de jerarquía */
     border-left: 4px solid var(--primary-green);
 }
+
+/* Mejoras de UI: columna de acciones sticky y botones más grandes */
+.actions-col {
+    position: -webkit-sticky; /* Safari */
+    position: sticky;
+    right: 0;
+    background: white;
+    z-index: 2;
+}
+
+.actions-th {
+    position: -webkit-sticky; /* Safari */
+    position: sticky;
+    right: 0;
+    background: #f1f5f9;
+    z-index: 3;
+}
+
+.action-button {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    margin: 0 4px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    background: #ffffff;
+}
+
+.action-button:hover { filter: brightness(0.98); }
+
+.action-button.delete { background: #fee2e2; border-color: #fca5a5; }
+
+.expand-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 800;
+    color: var(--text-muted);
+    margin-right: 8px;
+}
+
+/* Aumentar click target de las filas */
+tr td { padding: 14px 12px; }
+
 
 .prog-master-row:hover {
     background-color: #f1f5f9;

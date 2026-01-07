@@ -22,7 +22,7 @@
                 </div>
                 
                 <div class="controls-wrapper">
-                    <div class="filters">
+                    <div class="filters" style="display:flex; gap:10px; align-items:center;">
                         <select id="monthFilter" class="custom-select">
                             <option value="all">Todo el año 2026</option>
                             <option value="01">Enero</option>
@@ -38,6 +38,19 @@
                             <option value="11">Noviembre</option>
                             <option value="12">Diciembre</option>
                         </select>
+
+                        <!-- Nuevo: filtro por Docente -->
+                        <select id="docenteFilter" class="custom-select" style="min-width:160px;">
+                            <option value="all">Todos los docentes</option>
+                        </select>
+
+                        <!-- Nuevo: filtro por Programa -->
+                        <select id="programaFilter" class="custom-select" style="min-width:220px;">
+                            <option value="all">Todos los programas</option>
+                        </select>
+
+                        <!-- Nuevo: búsqueda de Módulo/Curso (texto libre) -->
+                        <input id="moduloFilter" placeholder="Buscar módulo/curso..." style="padding:8px; border-radius:6px; border:1px solid #e2e8f0; min-width:220px;">
                     </div>
                 </div>
             </header>
@@ -64,21 +77,45 @@
         </main>
 
         <div id="quickEditModal" class="modal hidden">
-            <div class="modal-content small shadow">
-                <header class="modal-header">
-                    <h3>Gestión de Programación</h3>
-                    <p id="courseNameTitle" class="course-highlight"></p>
+            <div class="modal-content shadow" style="max-width: 500px; padding: 2rem; border-radius: 15px; background: #fff;">
+                <header style="text-align: center; margin-bottom: 1.5rem;">
+                    <h3 style="color: #0054a6; margin: 0; font-size: 1.2rem;">Gestión de Programación</h3>
+                    <p id="courseNameTitle" style="color: #10b981; font-weight: bold; margin: 5px 0; font-size: 0.9rem;"></p>
                 </header>
-                <div class="field-box">
-                    <label for="inpRealTotal"># Participantes Real Total</label>
-                    <input type="number" id="inpRealTotal" min="0">
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem;">
+                    <div class="field-box">
+                        <label style="display: block; font-size: 10px; font-weight: bold; color: #64748b; margin-bottom: 4px;">P. PROGRAMA</label>
+                        <input type="number" id="q_Part_Programa" class="q-input" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;">
+                    </div>
+                    <div class="field-box">
+                        <label style="display: block; font-size: 10px; font-weight: bold; color: #64748b; margin-bottom: 4px;">P. CURSO</label>
+                        <input type="number" id="q_Part_Curso" class="q-input" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;">
+                    </div>
+                    <div class="field-box">
+                        <label style="display: block; font-size: 10px; font-weight: bold; color: #64748b; margin-bottom: 4px;">P. BECA</label>
+                        <input type="number" id="q_Part_Beca" class="q-input" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;">
+                    </div>
+                    <div class="field-box">
+                        <label style="display: block; font-size: 10px; font-weight: bold; color: #64748b; margin-bottom: 4px;">PAGO PROG.</label>
+                        <input type="number" id="q_Part_Pago_Programa" class="q-input" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;">
+                    </div>
+                    <div class="field-box" style="grid-column: span 2;">
+                        <label style="display: block; font-size: 10px; font-weight: bold; color: #64748b; margin-bottom: 4px;">PAGO CURSO</label>
+                        <input type="number" id="q_Part_Pago_Curso" class="q-input" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;">
+                    </div>
                 </div>
-                <div id="modalAdminActions" class="modal-footer-actions hidden">
-                    <button id="btnSaveQuick" class="btn-save" style="width: 100%; margin-bottom: 10px;">Actualizar Cantidad</button>
-                    <button class="btn-primary" style="background:#64748b; width: 100%; margin-bottom: 10px;" onclick="window.location.href='admin.html'">Configuración Completa</button>
-                    <button id="btnDeleteQuick" class="btn-delete" style="width: 100%;">Eliminar Registro</button>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
+                    <span style="font-size: 11px; color: #64748b; font-weight: bold; display: block;">TOTAL REAL CALCULADO</span>
+                    <div id="q_Total_Calculado" style="font-size: 1.5rem; font-weight: 800; color: #10b981;">0</div>
                 </div>
-                <button id="btnCloseModal" class="btn-link" style="margin-top: 20px; color: #64748b;">Cerrar Vista</button>
+
+                <div id="modalAdminActions" class="hidden" style="display: flex; flex-direction: column; gap: 8px;">
+                    <button id="btnSaveQuick" class="btn-save" style="width: 100%; padding: 10px; background: #10b981; border: none; color: white; border-radius: 6px; font-weight: bold; cursor: pointer;">✅ Actualizar Cantidades</button>
+                </div>
+                
+                <button id="btnCloseModal" style="width: 100%; margin-top: 15px; background: none; border: none; color: #64748b; text-decoration: underline; cursor: pointer; font-size: 12px;">Cerrar Vista</button>
             </div>
         </div>
     </div>
