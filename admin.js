@@ -739,31 +739,56 @@ function rellenarHorarioVisual(horarioStr) {
 }
 
 
+// Calcula una nueva fecha desplazada por `diasMover` (enteros, puede ser negativo).
+// Se aplica el desplazamiento en días calendario y luego se ajusta para evitar domingos y feriados
+// Si el desplazamiento es positivo, avanzamos hasta encontrar una fecha válida; si es negativo, retrocedemos.
+function calcularDesplazamientoFecha(fechaBase, diasMover) {
+    if (!fechaBase) return fechaBase;
+
+    const dir = diasMover >= 0 ? 1 : -1;
+    // Fecha tentativa: aplicamos desplazamiento en días calendario
+    const f = new Date(fechaBase + 'T00:00:00');
+    f.setDate(f.getDate() + diasMover);
+
+    // Ajustamos para saltar domingos (getDay()===0) y feriados en FERIADOS_2026
+    let safety = 0;
+    while ((f.getDay() === 0 || FERIADOS_2026.includes(f.toISOString().split('T')[0])) && safety < 365) {
+        f.setDate(f.getDate() + dir);
+        safety++;
+    }
+
+    return f.toISOString().split('T')[0];
+}
+
 async function ejecutarCascadaProgramas(nombrePrograma, ordenActual, diasMover) {
     if (diasMover === 0) return;
 
-    // Consultamos los módulos del mismo programa con orden superior
-    const q = query(
-        colRef, 
-        where("PROGRAMA", "==", nombrePrograma),
-        where("Modulo Orden", ">", ordenActual)
-    );
-    
-    const snap = await getDocs(q);
-    const batch = writeBatch(db);
+    try {
+        // Obtenemos todos los registros del programa y filtramos por orden en el cliente
+        const q = query(colRef, where("PROGRAMA", "==", nombrePrograma));
+        const snap = await getDocs(q);
+        const batch = writeBatch(db);
 
-    snap.forEach(docSnap => {
-        const data = docSnap.data();
-        const fechaBase = data["Fecha de inicio"];
-        // Usamos tu función existente para saltar domingos y feriados
-        const nuevaFecha = calcularDesplazamientoFecha(fechaBase, diasMover);
-        
-        batch.update(doc(db, "programaciones", docSnap.id), {
-            "Fecha de inicio": nuevaFecha
+        console.debug('ejecutarCascadaProgramas: encontrados', snap.size, 'doc(s) para programa', nombrePrograma, 'ordenActual:', ordenActual, 'diasMover:', diasMover);
+
+        snap.forEach(docSnap => {
+            const data = docSnap.data();
+            const orden = parseInt(data["Modulo Orden"]) || 0;
+            if (orden > ordenActual) {
+                const fechaBase = data["Fecha de inicio"];
+                const nuevaFecha = calcularDesplazamientoFecha(fechaBase, diasMover);
+                batch.update(doc(db, "programaciones", docSnap.id), {
+                    "Fecha de inicio": nuevaFecha
+                });
+                console.debug('ejecutarCascadaProgramas: program', nombrePrograma, '-> update', docSnap.id, 'orden', orden, fechaBase, '=>', nuevaFecha);
+            }
         });
-    });
 
-    await batch.commit();
+        await batch.commit();
+    } catch (err) {
+        console.error('Error en ejecutarCascadaProgramas:', err);
+        throw err;
+    }
 }
 
 
