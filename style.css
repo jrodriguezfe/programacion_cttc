@@ -499,3 +499,81 @@ tr td { padding: 14px 12px; }
     padding: 8px;
     border-bottom: 1px solid #f1f5f9;
 }
+
+/* ESTILOS PARA SECCIONES COLLAPSIBLES */
+.section-header-collapsible {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: #f1f5f9;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.3s ease;
+}
+
+.section-header-collapsible:hover {
+    background: #e2e8f0;
+}
+
+.section-header-collapsible h2 {
+    font-size: 1.25rem;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.toggle-icon {
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.section-content {
+    padding: 20px;
+    max-height: 1000px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+    opacity: 1;
+}
+
+/* ESTILOS PARA INPUTS DE FECHA EN TABLA */
+.fecha-modulo-inicio,
+.fecha-modulo-fin {
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+}
+
+.fecha-modulo-inicio:hover:not(:disabled),
+.fecha-modulo-fin:hover:not(:disabled) {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 4px rgba(14, 165, 233, 0.3);
+}
+
+.fecha-modulo-inicio:focus,
+.fecha-modulo-fin:focus {
+    outline: none;
+    border-color: #0ea5e9;
+    box-shadow: 0 0 8px rgba(14, 165, 233, 0.4);
+}
+
+.fecha-modulo-fin:disabled {
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* --- HORARIO BLOQUES --- */
+.horario-bloque {
+    margin-bottom: 15px !important;
+    display: block !important;
+    clear: both !important;
+    position: relative;
+    z-index: auto;
+}

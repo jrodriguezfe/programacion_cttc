@@ -19,56 +19,9 @@
         </header>
 
         <main class="admin-content">
-            <section class="form-container shadow">
-                <header class="section-title">
-                    <h2>Configuración de Programación Académica</h2>
-                    <p>Complete los datos para publicar o actualizar un curso/programa.</p>
-                </header>
-
-                <form id="adminForm">
-                    <div class="type-selection">
-                        <label for="regType">Tipo de Registro:</label>
-                        <select id="regType" class="custom-select" style="width: 100%; margin-top: 8px; padding: 10px;">
-                            <option value="CURSO">Módulo o Curso</option>
-                            <option value="PROGRAMA">Programa</option>
-                        </select>
-                    </div>
-
-                    <div class="form-grid-two-columns" id="fieldsGrid"></div>
-
-                    <div class="form-footer" style="margin-top: 20px; display: flex; gap: 10px;">
-                        <button type="submit" class="btn-save" id="btnSubmitMain" style="flex: 2;">Guardar Registro / Módulo</button>
-                        <button type="button" class="btn-link" id="btnFinalizar" style="flex: 1; background: #64748b; color: white; border: none;">Finalizar y Limpiar Todo</button>
-                    </div>
-                </form>
-            </section>
-
-            <section id="tableManagementSection" class="form-container shadow" style="margin-top: 30px;">
-                <div class="bulk-actions shadow">
-                    <h3>Gestión Masiva (Excel)</h3>
-                    <div class="button-group-row">
-                        <button type="button" id="btnDescargarPlantilla" class="btn-link-download" style="margin-right: 10px;">📄 Descargar Plantilla</button>
-                        
-                        <button id="btnExportExcel" class="btn-secondary">📥 Exportar Todo a Excel</button>
-                        
-                        <label for="importExcel" class="btn-primary" style="cursor:pointer">
-                            📤 Importar desde Excel
-                        </label>
-                        <input type="file" id="importExcel" accept=".xlsx, .xls" style="display:none">
-                    </div>
-
-                    <div class="import-guide">
-                        <strong>Campos requeridos en el Excel ok:</strong>
-                        <p>Asegúrese de incluir las columnas de desglose: 
-                            <strong>Part Programa, Part Curso, Part Beca, Part Pago Programa, Part Pago Curso</strong>. 
-                            El sistema sumará estos valores automáticamente en el campo "Real Total".
-                        </p>
-                    </div>
-
-                    <small class="help-text">Asegúrese de usar el formato de columnas predefinido.</small>
-                </div>
-
-                <div class="section-title" style="margin-top: 30px;">
+            <!-- SECCIÓN 1: LISTADO DE GESTIÓN (APARECE PRIMERO) -->
+            <section id="tableManagementSection" class="form-container shadow">
+                <div class="section-title">
                     <h2>Listado de Gestión</h2>
                     <p>Seleccione un registro para editar sus datos o eliminarlo permanentemente.</p>
                 </div>
@@ -78,8 +31,7 @@
                         <thead>
                             <tr>
                                 <th>NRC</th>
-                                <th>Programa / Curso</th>
-                                <th>Inicio</th>
+                                <th>Programa / Curso / Módulo</th>
                                 <th style="text-align: center;" class="actions-th">Acciones</th>
                             </tr>
                         </thead>
@@ -87,10 +39,94 @@
                     </table>
                 </div>
             </section>
+
+            <!-- SECCIÓN 2: CONFIGURACIÓN (COLLAPSIBLE) -->
+            <section class="form-container shadow" style="margin-top: 30px;">
+                <header class="section-header-collapsible" onclick="toggleSection(this)">
+                    <h2>Configuración de Programación Académica</h2>
+                    <span class="toggle-icon">▼</span>
+                </header>
+                <div class="section-content" style="display: none; max-height: 0px;">
+                    <p style="color: #64748b; margin-bottom: 15px;">Complete los datos para publicar o actualizar un curso/programa.</p>
+
+                    <form id="adminForm">
+                        <div class="type-selection">
+                            <label for="regType">Tipo de Registro:</label>
+                            <select id="regType" class="custom-select" style="width: 100%; margin-top: 8px; padding: 10px;">
+                                <option value="CURSO">Módulo o Curso</option>
+                                <option value="PROGRAMA">Programa</option>
+                            </select>
+                        </div>
+
+                        <div class="form-grid-two-columns" id="fieldsGrid"></div>
+
+                        <div class="form-footer" style="margin-top: 20px; display: flex; gap: 10px;">
+                            <button type="submit" class="btn-save" id="btnSubmitMain" style="flex: 2;">Guardar Registro / Módulo</button>
+                            <button type="button" class="btn-link" id="btnFinalizar" style="flex: 1; background: #64748b; color: white; border: none;">Finalizar y Limpiar Todo</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 3: GESTIÓN MASIVA (COLLAPSIBLE) -->
+            <section class="form-container shadow" style="margin-top: 30px;">
+                <header class="section-header-collapsible" onclick="toggleSection(this)">
+                    <h2>Gestión Masiva (Excel)</h2>
+                    <span class="toggle-icon">▼</span>
+                </header>
+                <div class="section-content" style="display: none; max-height: 0px;">
+                    <div class="bulk-actions shadow">
+                        <div class="button-group-row">
+                            <button type="button" id="btnDescargarPlantilla" class="btn-link-download" style="margin-right: 10px;">📄 Descargar Plantilla</button>
+                            
+                            <button id="btnExportExcel" class="btn-secondary">📥 Exportar Todo a Excel</button>
+                            
+                            <label for="importExcel" class="btn-primary" style="cursor:pointer">
+                                📤 Importar desde Excel
+                            </label>
+                            <input type="file" id="importExcel" accept=".xlsx, .xls" style="display:none">
+                        </div>
+
+                        <div class="import-guide">
+                            <strong>Campos requeridos en el Excel:</strong>
+                            <p>Asegúrese de incluir las columnas de desglose: 
+                                <strong>Part Programa, Part Curso, Part Beca, Part Pago Programa, Part Pago Curso</strong>. 
+                                El sistema sumará estos valores automáticamente en el campo "Real Total".
+                            </p>
+                        </div>
+
+                        <small class="help-text">Asegúrese de usar el formato de columnas predefinido.</small>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
+    <script>
+        // Función para toggle de secciones collapsibles
+        function toggleSection(header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.toggle-icon');
+            
+            const isHidden = content.style.maxHeight === '0px' || content.style.display === 'none';
+            
+            if (isHidden) {
+                content.style.display = 'block';
+                // Reflow para que scrollHeight sea calculado
+                content.offsetHeight;
+                content.style.maxHeight = content.scrollHeight + 'px';
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                content.style.maxHeight = '0px';
+                icon.style.transform = 'rotate(0deg)';
+                setTimeout(() => {
+                    content.style.display = 'none';
+                }, 300);
+            }
+        }
+    </script>
     
     <script type="module" src="admin.js"></script>
 </body>
