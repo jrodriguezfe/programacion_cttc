@@ -496,19 +496,35 @@ function recolectarDatosGestion() {
 
    
 
-    // 1. Recolección de Horario (Bloques)
+    // 1. Recolección de Horario (Bloques) - Solo recopilar bloques que tengan días activos
 
     document.querySelectorAll('.horario-bloque').forEach(b => {
 
         const dias = Array.from(b.querySelectorAll('.btn-dia.active')).map(btn => btn.textContent);
 
-        if (dias.length > 0) {
+        const tipoBloque = b.querySelector('p').textContent; // Ej: "BLOQUE: ONLINE"
 
-            horarioStr += `${b.querySelector('p').textContent}: ${dias.join('-')} (${b.querySelector('.t-ini').value} a ${b.querySelector('.t-fin').value}) | `;
+        const horaIni = b.querySelector('.t-ini').value;
+
+        const horaFin = b.querySelector('.t-fin').value;
+
+        
+
+        // Solo agregar si hay días Y horas definidas
+
+        if (dias.length > 0 && horaIni && horaFin) {
+
+            horarioStr += `${tipoBloque}: ${dias.join('-')} (${horaIni} a ${horaFin}) | `;
 
         }
 
     });
+
+    
+
+    // Limpiar trailing " | " si existe
+
+    horarioStr = horarioStr.replace(/ \| $/, '');
 
 
 
@@ -559,11 +575,15 @@ function recolectarDatosGestion() {
 }
 
 
+
 // 6. APOYO EDICIÓN Y LIMPIEZA
 
 window.prepareEditPrograma = async (nombrePrograma) => {
 
-    if(!nombrePrograma) return;
+    if(!nombrePrograma) {
+        alert("Error: No se especificó el nombre del programa.");
+        return;
+    }
 
     try {
 
@@ -571,11 +591,13 @@ window.prepareEditPrograma = async (nombrePrograma) => {
 
         selectedDocId = null;
 
-
+        console.log(`[EDIT] Buscando programa: "${nombrePrograma}"`);
 
         const qCabecera = query(colRef, where("PROGRAMA", "==", nombrePrograma), limit(1));
 
         const snapCabecera = await getDocs(qCabecera);
+
+        console.log(`[EDIT] Resultados cabecera: ${snapCabecera.size}`);
 
        
 
@@ -604,6 +626,8 @@ window.prepareEditPrograma = async (nombrePrograma) => {
             const qModulos = query(colRef, where("PROGRAMA", "==", nombrePrograma), where("TIPO", "==", "MÓDULO"));
 
             const snapModulos = await getDocs(qModulos);
+
+            console.log(`[EDIT] Módulos encontrados: ${snapModulos.size}`);
 
            
 
@@ -651,15 +675,40 @@ window.prepareEditPrograma = async (nombrePrograma) => {
 
            
 
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            console.log(`[EDIT] ✅ Programa cargado exitosamente. Módulos temporales: ${modulosTemporales.length}`);
+
+            // Abrir la sección de configuración si está cerrada
+            const configSection = document.querySelector('.section-header-collapsible');
+            if (configSection) {
+                const contentSection = configSection.nextElementSibling;
+                if (contentSection && contentSection.style.display === 'none') {
+                    configSection.click(); // Simular click para abrir
+                }
+            }
+
+            // Scroll hacia arriba después de que el DOM esté completamente actualizado
+            setTimeout(() => {
+                const formElement = document.getElementById('adminForm');
+                if (formElement) {
+                    formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }, 100);
+
+        } else {
+
+            alert(`⚠️ No se encontró el programa "${nombrePrograma}". Verifica que exista.`);
+
+            console.log(`[EDIT] Error: Programa no encontrado. Buscó: "${nombrePrograma}"`);
 
         }
 
-    } catch (error) { 
+    } catch (error) {
 
-        console.error("Error al recuperar:", error); 
+        console.error("Error al recuperar:", error);
 
-        alert("Error al cargar componentes.");
+        alert("Error al cargar componentes: " + error.message);
 
     }
 
@@ -933,6 +982,10 @@ document.getElementById('adminForm').onsubmit = async (e) => {
 
         btnSubmit.textContent = originalText;
 
+    }
+
+};
+
 
 
 // Nueva función para sincronizar fechas de módulos basándose en el primero
@@ -953,49 +1006,37 @@ function sincronizarFechasModulos() {
 
    
 
+    // Obtener horario y modalidad del módulo 1 para copiar a los demás
+
+    const moduloPrimero = modulosOrdenados[0];
+
+    const horarioPrimero = moduloPrimero ? moduloPrimero.Horario : null;
+
+    const modalidadPrimera = moduloPrimero ? moduloPrimero["MODALIDAD MÓDULO"] : null;
+
+   
+
     // Procesar cada módulo en orden
 
     modulosOrdenados.forEach((m, idx) => {
+
+        // Copiar horario y modalidad del módulo 1 a todos los demás
+
+        if (idx > 0) {
+
+            if (horarioPrimero) m.Horario = horarioPrimero;
+
+            if (modalidadPrimera) m["MODALIDAD MÓDULO"] = modalidadPrimera;
+
+        }
+
+        
 
         // Calcular fecha de fin para el módulo actual basándose en su fecha de inicio
 
         if (m["Fecha de inicio"] && m["Fecha de inicio"].trim() !== "") {
 
-            const duracion = parseInt(m["Duracion"]) || 0;
-
-            const horasDiales = calcularHorasPorDia(m);
-
-           
-
-            let fechaFin = new Date(m["Fecha de inicio"] + "T00:00:00");
-
-            let horasAcumuladas = 0;
-
-            let safety = 0;
-
-           
-
-            while (horasAcumuladas < duracion && safety < 500) {
-
-                const iso = fechaFin.toISOString().split('T')[0];
-
-                // Solo saltar feriados, NO domingos (se pueden tener clases)
-
-                if (!FERIADOS_2026.includes(iso)) {
-
-                    horasAcumuladas += horasDiales;
-
-                }
-
-                if (horasAcumuladas < duracion) fechaFin.setDate(fechaFin.getDate() + 1);
-
-                safety++;
-
-            }
-
-           
-
-            m["Fecha de fin"] = fechaFin.toISOString().split('T')[0];
+            m["Fecha de fin"] = calcularFechaFinModulo(m);
 
         }
 
@@ -1097,39 +1138,7 @@ function recalcularFechasModulosCascada() {
 
         // Calcular fecha de fin para el módulo actual
 
-        const duracion = parseInt(m["Duracion"]) || 0;
-
-        const horasDiales = calcularHorasPorDia(m);
-
-       
-
-        let fechaFin = new Date(m["Fecha de inicio"] + "T00:00:00");
-
-        let horasAcumuladas = 0;
-
-        let safety = 0;
-
-       
-
-        while (horasAcumuladas < duracion && safety < 500) {
-
-            const iso = fechaFin.toISOString().split('T')[0];
-
-            if (!FERIADOS_2026.includes(iso)) {
-
-                horasAcumuladas += horasDiales;
-
-            }
-
-            if (horasAcumuladas < duracion) fechaFin.setDate(fechaFin.getDate() + 1);
-
-            safety++;
-
-        }
-
-       
-
-        m["Fecha de fin"] = fechaFin.toISOString().split('T')[0];
+        m["Fecha de fin"] = calcularFechaFinModulo(m);
 
        
 
@@ -1253,39 +1262,7 @@ async function recalcularFechasModulosCascadaDesdeTabla(nombrePrograma) {
 
         // Calcular fecha de fin para el módulo actual
 
-        const duracion = parseInt(m["Duracion"]) || 0;
-
-        const horasDiales = calcularHorasPorDia(m);
-
-       
-
-        let fechaFin = new Date(m["Fecha de inicio"] + "T00:00:00");
-
-        let horasAcumuladas = 0;
-
-        let safety = 0;
-
-       
-
-        while (horasAcumuladas < duracion && safety < 500) {
-
-            const iso = fechaFin.toISOString().split('T')[0];
-
-            if (!FERIADOS_2026.includes(iso)) {
-
-                horasAcumuladas += horasDiales;
-
-            }
-
-            if (horasAcumuladas < duracion) fechaFin.setDate(fechaFin.getDate() + 1);
-
-            safety++;
-
-        }
-
-       
-
-        m["Fecha de fin"] = fechaFin.toISOString().split('T')[0];
+        m["Fecha de fin"] = calcularFechaFinModulo(m);
 
        
 
@@ -1347,45 +1324,392 @@ async function recalcularFechasModulosCascadaDesdeTabla(nombrePrograma) {
 
 
 
-// Función auxiliar para calcular horas por día de un módulo
+// Nueva función para actualizar horario y modalidad en cascada desde un módulo
 
-function calcularHorasPorDia(modulo) {
+window.actualizarHorarioCascada = async (moduloId, nombrePrograma) => {
 
-    const horarioStr = modulo.Horario || "";
+    if (!confirm(`¿Actualizar horario, frecuencia (días) y modalidad en cascada desde este módulo?\n\nEsto copiará el horario completo (días, horas) y modalidad de este módulo a todos los siguientes.`)) return;
 
-    if (!horarioStr) return 0;
+    try {
 
-   
+        // Obtener el módulo actual
 
-    let maxHoras = 0;
+        const snap = await getDoc(doc(db, "programaciones", moduloId));
 
-    const bloques = horarioStr.split(' | ');
+        if (!snap.exists()) {
 
-   
+            alert("Error: No se encontró el módulo.");
 
-    bloques.forEach(bloqueTexto => {
-
-        if (!bloqueTexto.trim()) return;
-
-        const match = bloqueTexto.match(/\((.*?) a (.*?)\)/);
-
-        if (match) {
-
-            const [_, horaIni, horaFin] = match;
-
-            const horas = (new Date(`2026-01-01T${horaFin}`) - new Date(`2026-01-01T${horaIni}`)) / 3600000;
-
-            if (horas > 0) maxHoras = Math.max(maxHoras, horas);
+            return;
 
         }
 
+        const moduloActual = snap.data();
+
+        const ordenActual = parseInt(moduloActual["Modulo Orden"]) || 0;
+
+        const horarioActual = moduloActual.Horario; // Contiene bloques con días, horas y modalidad
+
+        const modalidadActual = moduloActual["MODALIDAD MÓDULO"];
+
+        
+
+        if (!horarioActual || !modalidadActual) {
+
+            alert("⚠️ El módulo debe tener horario (con días y horas) y modalidad definidos.");
+
+            return;
+
+        }
+
+        
+
+        console.log(`[HORARIO] Copiando horario y frecuencia desde módulo ${ordenActual}:`, horarioActual);
+
+        
+
+        // Obtener todos los módulos del programa
+
+        const q = query(colRef, where("PROGRAMA", "==", nombrePrograma), where("TIPO", "==", "MÓDULO"));
+
+        const snapModulos = await getDocs(q);
+
+        const modulos = [];
+
+        snapModulos.forEach(doc => {
+
+            modulos.push({ id: doc.id, ...doc.data() });
+
+        });
+
+        
+
+        // Ordenar por "Modulo Orden"
+
+        const modulosOrdenados = modulos.sort((a, b) =>
+
+            (parseInt(a["Modulo Orden"]) || 0) - (parseInt(b["Modulo Orden"]) || 0)
+
+        );
+
+        
+
+        // Actualizar horario, días (frecuencia) y modalidad de módulos desde el actual en adelante
+
+        const batch = writeBatch(db);
+
+        
+
+        for (let i = 0; i < modulosOrdenados.length; i++) {
+
+            const mod = modulosOrdenados[i];
+
+            const orden = parseInt(mod["Modulo Orden"]) || 0;
+
+            
+
+            // Solo procesar módulos desde el actual hacia adelante
+
+            if (orden < ordenActual) continue;
+
+            
+
+            // Actualizar módulo con el horario completo (con días/frecuencia) y modalidad
+
+            batch.set(doc(db, "programaciones", mod.id), {
+
+                "Horario": horarioActual,
+
+                "MODALIDAD MÓDULO": modalidadActual,
+
+                timestamp: new Date()
+
+            }, { merge: true });
+
+            
+
+            console.log(`[HORARIO] Actualizando módulo ${orden}: ${mod["MODULO-CURSO"]}`);
+
+        }
+
+        
+
+        await batch.commit();
+
+        alert("✅ Horario, frecuencia (días) y modalidad actualizados en cascada correctamente.");
+
+        loadAdminTable();
+
+    } catch (err) {
+
+        console.error("Error al actualizar horario:", err);
+
+        alert("❌ Error: " + err.message);
+
+    }
+
+};
+
+
+
+// ============ FUNCIÓN AUXILIAR PARA CALCULAR FECHA DE FIN ============
+function calcularFechaFinModulo(modulo) {
+    const duracion = parseInt(modulo["Duracion"]) || 0;
+    const diasHoras = calcularHorasPorDia(modulo); // { "Lun": 2, "Mié": 3, ... }
+    const diasAbreviados = Object.keys(diasHoras); // ["Lun", "Mié", ...]
+
+    if (!modulo["Fecha de inicio"] || !modulo["Fecha de inicio"].trim() || diasAbreviados.length === 0) {
+        return modulo["Fecha de fin"] || ""; // Retornar la actual si no hay datos
+    }
+
+    let fechaFin = new Date(modulo["Fecha de inicio"] + "T00:00:00");
+    let horasAcumuladas = 0;
+    let safety = 0;
+    const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+    while (horasAcumuladas < duracion && safety < 500) {
+        const iso = fechaFin.toISOString().split('T')[0];
+        const diaNumero = fechaFin.getDay();
+        const diaAbrev = diasSemana[diaNumero];
+
+        // Solo sumar horas si NO es feriado Y el módulo tiene clase ese día
+        if (!FERIADOS_2026.includes(iso) && diasAbreviados.includes(diaAbrev)) {
+            const horasDelDia = diasHoras[diaAbrev];
+            horasAcumuladas += horasDelDia;
+        }
+
+        if (horasAcumuladas < duracion) fechaFin.setDate(fechaFin.getDate() + 1);
+        safety++;
+    }
+
+    return fechaFin.toISOString().split('T')[0];
+}
+
+// Función auxiliar para calcular horas por día de un módulo
+
+// Devuelve un mapa de {día: horas} basado en el horario
+// Ej: { "Lun": 2, "Mié": 3, "Vie": 3 }
+function calcularHorasPorDia(modulo) {
+    const horarioStr = modulo.Horario || "";
+    if (!horarioStr) return {};
+
+    const diasHoras = {}; // { "Lun": 2, "Mié": 3, ... }
+    const bloques = horarioStr.split(' | ').filter(b => b.trim());
+
+    console.log(`[CALC HORAS] Horario: "${horarioStr}"`);
+    console.log(`[CALC HORAS] Bloques encontrados: ${bloques.length}`);
+
+    bloques.forEach((bloqueTexto, idx) => {
+        if (!bloqueTexto.trim()) return;
+        
+        // Parse: "BLOQUE: ONLINE: Lun-Mar (08:00 a 10:00)"
+        const match = bloqueTexto.match(/BLOQUE: (.*?): (.*?) \((.*?) a (.*?)\)/);
+        if (!match) return;
+
+        const [_, tipo, diasStr, horaIni, horaFin] = match;
+        const dias = diasStr.split('-').map(d => d.trim());
+        const horas = (new Date(`2026-01-01T${horaFin}`) - new Date(`2026-01-01T${horaIni}`)) / 3600000;
+
+        console.log(`[CALC HORAS] Bloque ${idx + 1} (${tipo}): ${diasStr} (${horaIni} a ${horaFin}) = ${horas} horas`);
+
+        // Asignar las mismas horas a cada día
+        dias.forEach(dia => {
+            diasHoras[dia] = horas;
+        });
     });
 
-   
-
-    return maxHoras;
+    console.log(`[CALC HORAS] Mapa día-horas:`, diasHoras);
+    return diasHoras;
 
 }
+
+
+
+// Nueva función para actualizar cascada desde un módulo específico
+
+window.actualizarCascadaDesdeModulo = async (moduloId, nombrePrograma) => {
+
+    if (!confirm(`¿Actualizar fechas en cascada desde este módulo?\n\nEsto recalculará las fechas de este módulo y todos los siguientes, considerando:\n- La fecha de inicio que ingresaste\n- Duración y horario del módulo\n- Feriados\n- 7 días de break entre módulos`)) return;
+
+    try {
+
+        // 1. Obtener la fecha de inicio del campo input en la tabla
+        const inputFechaInicio = document.querySelector(`input[data-modulo-id="${moduloId}"].fecha-modulo-inicio`);
+        let fechaInicioEditada = inputFechaInicio ? inputFechaInicio.value : null;
+
+        // 2. Obtener el módulo actual desde Firebase
+        const snap = await getDoc(doc(db, "programaciones", moduloId));
+
+        if (!snap.exists()) {
+
+            alert("Error: No se encontró el módulo.");
+
+            return;
+
+        }
+
+        const moduloActual = snap.data();
+        const ordenActual = parseInt(moduloActual["Modulo Orden"]) || 0;
+
+        // 3. Si se editó la fecha de inicio en el input, actualizar en Firebase primero
+        if (fechaInicioEditada && fechaInicioEditada !== moduloActual["Fecha de inicio"]) {
+            await setDoc(doc(db, "programaciones", moduloId), {
+                "Fecha de inicio": fechaInicioEditada
+            }, { merge: true });
+            moduloActual["Fecha de inicio"] = fechaInicioEditada;
+        }
+
+        // 4. Validar que tenemos fecha de inicio
+        const fechaInicio = moduloActual["Fecha de inicio"];
+        if (!fechaInicio || fechaInicio.trim() === "") {
+
+            alert("⚠️ El módulo debe tener una fecha de inicio definida.");
+
+            return;
+
+        }
+
+        // 5. Obtener todos los módulos del programa
+
+        const q = query(colRef, where("PROGRAMA", "==", nombrePrograma), where("TIPO", "==", "MÓDULO"));
+
+        const snapModulos = await getDocs(q);
+
+        const modulos = [];
+
+        snapModulos.forEach(doc => {
+
+            modulos.push({ id: doc.id, ...doc.data() });
+
+        });
+
+        
+
+        // Ordenar por "Modulo Orden"
+
+        const modulosOrdenados = modulos.sort((a, b) =>
+
+            (parseInt(a["Modulo Orden"]) || 0) - (parseInt(b["Modulo Orden"]) || 0)
+
+        );
+
+        
+
+        // Procesar desde el módulo actual hacia adelante
+
+        const batch = writeBatch(db);
+
+        let fechaActual = moduloActual["Fecha de inicio"];
+
+        
+
+        if (!fechaActual) {
+
+            alert("⚠️ El módulo debe tener una fecha de inicio definida.");
+
+            return;
+
+        }
+
+        
+
+        for (let i = 0; i < modulosOrdenados.length; i++) {
+
+            const mod = modulosOrdenados[i];
+
+            const orden = parseInt(mod["Modulo Orden"]) || 0;
+
+            
+
+            // Solo procesar módulos desde el actual hacia adelante
+
+            if (orden < ordenActual) continue;
+
+            
+
+            // Para el primer módulo a procesar, usar su fecha de inicio
+
+            // Para los demás, calcular basándose en el anterior
+
+            if (orden === ordenActual) {
+
+                fechaActual = moduloActual["Fecha de inicio"];
+
+            } else if (i > 0) {
+
+                // Comenzar 7 días después del fin del módulo anterior
+
+                const modAnterior = modulosOrdenados[i - 1];
+
+                if (modAnterior["Fecha de fin"]) {
+
+                    let fechaInicio = new Date(modAnterior["Fecha de fin"] + "T00:00:00");
+
+                    fechaInicio.setDate(fechaInicio.getDate() + 7);
+
+                    
+
+                    // Saltar feriados
+
+                    while (FERIADOS_2026.includes(fechaInicio.toISOString().split('T')[0])) {
+
+                        fechaInicio.setDate(fechaInicio.getDate() + 1);
+
+                    }
+
+                    
+
+                    fechaActual = fechaInicio.toISOString().split('T')[0];
+
+                }
+
+            }
+
+            
+
+            // Calcular fecha de fin basándose en duración y horario
+
+            mod["Fecha de inicio"] = fechaActual;
+
+            mod["Fecha de fin"] = calcularFechaFinModulo(mod);
+
+            
+
+            const fechaFinStr = mod["Fecha de fin"];
+
+            
+
+            // Actualizar módulo en Firebase
+
+            batch.set(doc(db, "programaciones", mod.id), {
+
+                "Fecha de inicio": fechaActual,
+
+                "Fecha de fin": fechaFinStr,
+
+                timestamp: new Date()
+
+            }, { merge: true });
+
+        }
+
+        
+
+        await batch.commit();
+
+        alert("✅ Fechas actualizadas en cascada correctamente.");
+
+        loadAdminTable();
+
+    } catch (err) {
+
+        console.error("Error al actualizar cascada:", err);
+
+        alert("❌ Error: " + err.message);
+
+    }
+
+};
 
 
 
@@ -1611,6 +1935,10 @@ function loadAdminTable() {
 
                         <div class="actions-col" style="text-align:center; padding:0;">
 
+                            <button class="action-button" onclick="actualizarCascadaDesdeModulo('${m.id}', '${progName}')" title="Actualizar fechas en cascada desde este módulo" style="background:#10b981; color:white; margin-right:5px;">⬇️ Cascada</button>
+
+                            <button class="action-button" onclick="actualizarHorarioCascada('${m.id}', '${progName}')" title="Copiar horario, días y modalidad a módulos siguientes" style="background:#8b5cf6; color:white; margin-right:5px;">🕐 Horario</button>
+
                             <button class="action-button" onclick="cloneRecord('${m.id}')" title="Clonar Módulo">📋</button>
 
                             <button class="action-button" onclick="prepareEdit('${m.id}')">✏️</button>
@@ -1812,67 +2140,59 @@ window.deleteProgram = async (nombrePrograma) => {
 };
 
 window.prepareEdit = async (id) => {
+
     selectedDocId = id;
-    
-    // Si estamos editando dentro de un programa, usar el módulo de modulosTemporales
+
+    // PRIMERO: Verificar si estamos editando un módulo dentro de un programa
     let dt = null;
-    
     if (window.editandoProgramaActivo) {
-        // Buscar el módulo en modulosTemporales
         const modEnTemporal = modulosTemporales.find(m => m.id === id);
-        if (modEnTemporal) {
-            dt = modEnTemporal;
-        }
+        if (modEnTemporal) dt = modEnTemporal;
     }
-    
-    // Si no está en temporal, cargar de Firebase
+
+    // SEGUNDO: Si no está en modulosTemporales, cargar desde Firebase
     if (!dt) {
         const snap = await getDoc(doc(db, "programaciones", id));
-        if (snap.exists()) {
-            dt = snap.data();
-        }
+        if (snap.exists()) dt = snap.data();
     }
-    
+
     if (dt) {
-        // Primero, cargar todos los campos de texto y checkboxes
+        // Cambiar a MÓDULO si estamos editando dentro de un programa
+        if (window.editandoProgramaActivo && dt.TIPO === "MÓDULO") {
+            document.getElementById('regType').value = "CURSO";
+            document.getElementById('regType').dispatchEvent(new Event('change'));
+        }
+
+        // Cargar todos los campos
         [...CAMPOS_CABECERA, ...CAMPOS_GESTION].forEach(c => {
             const el = document.getElementById(`f_${c.replace(/ /g, "_")}`);
             if (el) el.value = dt[c] || "";
         });
+
         CAMPOS_CHECKBOX.forEach(c => {
             const el = document.getElementById(`f_${c.replace(/ /g, "_")}`);
             if (el) el.checked = dt[c] === "SI";
         });
 
-        // 2. Recrear el horario visual ANTES de rellenarlo
-        // Esto es importante porque updateHorarioUI crea los elementos HTML
-        const modalidad = document.getElementById('f_MODALIDAD_MÓDULO')?.value || dt["MODALIDAD MÓDULO"] || "Online";
+        // IMPORTANTE: Crear estructura de horario ANTES de llenarla
+        const modalidad = dt["MODALIDAD MÓDULO"] || "Online";
         updateHorarioUI(modalidad);
-        
-        // 3. RELLENAR HORARIO VISUAL (si existe en el documento)
+
+        // Esperar a que el DOM esté actualizado
         if (dt.Horario) {
-            // Esperar un frame para asegurar que los elementos se han creado
             await new Promise(resolve => requestAnimationFrame(resolve));
             rellenarHorarioVisual(dt.Horario);
         }
 
-        // 4. ABRIR SECCIÓN DE CONFIGURACIÓN
-        const configSection = document.querySelector('.form-container:has(.section-header-collapsible)');
-        if (configSection) {
-            const header = configSection.querySelector('.section-header-collapsible');
-            const content = header.nextElementSibling;
-            const icon = header.querySelector('.toggle-icon');
-            
-            if (content && (content.style.maxHeight === '0px' || content.style.display === 'none')) {
-                content.style.display = 'block';
-                content.offsetHeight; // Reflow
-                content.style.maxHeight = content.scrollHeight + 'px';
-                if (icon) icon.style.transform = 'rotate(180deg)';
-            }
+        // Abrir la sección de configuración
+        const configHeader = document.querySelector('.section-header-collapsible');
+        if (configHeader && configHeader.nextElementSibling.style.display === 'none') {
+            toggleSection(configHeader);
         }
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+
 };
 
 
@@ -1880,59 +2200,55 @@ window.prepareEdit = async (id) => {
 
 
 function rellenarHorarioVisual(horarioStr) {
-    if (!horarioStr || typeof horarioStr !== 'string') {
-        console.warn("rellenarHorarioVisual: horarioStr vacío o no es string", horarioStr);
-        return;
-    }
 
-    console.log("rellenarHorarioVisual: Horario a rellenar:", horarioStr);
+    if (!horarioStr || typeof horarioStr !== 'string') return;
 
     // 1. Asegurarse de que los bloques estén creados según la modalidad actual
     const modalidad = document.getElementById('f_MODALIDAD_MÓDULO')?.value || "Online";
     updateHorarioUI(modalidad);
 
-    // 2. Separar los bloques (divididos por " | ")
+    // 2. PRIMERO: Limpiar todos los bloques antes de rellenar
+    document.querySelectorAll('.horario-bloque').forEach(bloqueEl => {
+        bloqueEl.querySelectorAll('.btn-dia').forEach(btn => btn.classList.remove('active'));
+        const inputIni = bloqueEl.querySelector('.t-ini');
+        const inputFin = bloqueEl.querySelector('.t-fin');
+        if (inputIni) inputIni.value = '';
+        if (inputFin) inputFin.value = '';
+    });
+
+    // 3. Separar los bloques (usualmente divididos por " | ") y filtrar vacíos
     const bloques = horarioStr.split(' | ').filter(b => b.trim());
-    console.log("rellenarHorarioVisual: Bloques encontrados:", bloques);
 
     bloques.forEach(bloqueTexto => {
         if (!bloqueTexto.trim()) return;
 
         // Extraer partes: "BLOQUE: ONLINE: Lun-Mar (08:00 a 10:00)"
-        // O más flexible: "BLOQUE: TIPO: días (hora a hora)"
-        const match = bloqueTexto.match(/BLOQUE:\s*(.*?):\s*(.*?)\s*\((.*?)\s+a\s+(.*?)\)/);
-        
-        console.log("rellenarHorarioVisual: Intentando parsear bloque:", bloqueTexto, "Match:", match);
-        
+        const match = bloqueTexto.match(/BLOQUE: (.*?): (.*?) \((.*?) a (.*?)\)/);
         if (match) {
             const [_, tipo, diasStr, horaIni, horaFin] = match;
-            const diasArray = diasStr.trim().split('-').map(s => s.trim());
-
-            console.log("rellenarHorarioVisual: Tipo:", tipo, "Días:", diasArray, "Horas:", horaIni, "-", horaFin);
+            const diasArray = diasStr.split('-').map(s => s.trim());
 
             // Buscar el contenedor del bloque correcto (Online o Presencial)
+            // Usar una bandera para asegurar que solo rellena UNA vez por tipo
+            let bloqueEncontrado = false;
             document.querySelectorAll('.horario-bloque').forEach(bloqueEl => {
                 const titulo = bloqueEl.querySelector('p')?.textContent || '';
 
-                // Comparar el tipo de bloque (ONLINE, PRESENCIAL, etc)
-                if (titulo.includes(tipo.trim())) {
-                    console.log("rellenarHorarioVisual: Encontrado bloque coincidente:", titulo);
+                if (titulo.includes(tipo) && !bloqueEncontrado) {
+                    bloqueEncontrado = true;
                     
                     // Marcar días
                     bloqueEl.querySelectorAll('.btn-dia').forEach(btn => {
                         if (diasArray.includes(btn.textContent)) {
                             btn.classList.add('active');
-                        } else {
-                            btn.classList.remove('active');
                         }
                     });
+                    
                     // Rellenar horas
                     const inputIni = bloqueEl.querySelector('.t-ini');
                     const inputFin = bloqueEl.querySelector('.t-fin');
-                    if (inputIni) inputIni.value = horaIni.trim();
-                    if (inputFin) inputFin.value = horaFin.trim();
-                    
-                    console.log("rellenarHorarioVisual: Horario rellenado - Inicio:", horaIni.trim(), "Fin:", horaFin.trim());
+                    if (inputIni) inputIni.value = horaIni;
+                    if (inputFin) inputFin.value = horaFin;
                 }
             });
         }
@@ -2077,21 +2393,41 @@ window.cloneRecord = async (id, nombrePrograma = null) => {
 
                 // Limpiamos IDs y actualizamos timestamp para que aparezca arriba
 
-                batch.set(newRef, {
+                // Aseguramos que TIPO se mantiene (MÓDULO o CURSO) y copiamos todos los campos
+
+                const dataClon = {
 
                     ...data,
 
                     PROGRAMA: `${data.PROGRAMA} (COPIA)`,
 
+                    TIPO: data.TIPO || "MÓDULO",
+
                     timestamp: new Date()
 
-                });
+                };
+
+                
+
+                // Asegurar que los campos de fecha se copien
+
+                if (data["Fecha de inicio"]) dataClon["Fecha de inicio"] = data["Fecha de inicio"];
+
+                if (data["Fecha de fin"]) dataClon["Fecha de fin"] = data["Fecha de fin"];
+
+                if (data["Modulo Orden"]) dataClon["Modulo Orden"] = data["Modulo Orden"];
+
+                
+
+                batch.set(newRef, dataClon);
 
             });
 
             await batch.commit();
 
             alert("✅ Programa completo clonado como copia.");
+
+            location.reload();
 
         } else {
 
@@ -2118,6 +2454,8 @@ window.cloneRecord = async (id, nombrePrograma = null) => {
                 });
 
                 alert("✅ Registro clonado con éxito.");
+
+                location.reload();
 
             }
 

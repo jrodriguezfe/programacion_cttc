@@ -25,6 +25,7 @@ let currentMonth = "all";
 let currentDocente = "all";
 let currentPrograma = "all";
 let currentModuloQuery = "";
+let hideStartedCourses = false;
 let userLogged = null;
 let lastSnapshotData = [];
 
@@ -54,6 +55,11 @@ function renderFromData(rawData) {
         if (!tbody) return;
         tbody.innerHTML = '';
 
+        // Debug: contar módulos
+        const modulosCont = rawData.filter(d => d.TIPO === "MÓDULO").length;
+        const cursosCount = rawData.filter(d => d.TIPO !== "MÓDULO").length;
+        console.log(`[DEBUG] Total Módulos: ${modulosCont}, Total Cursos: ${cursosCount}, Total registros: ${rawData.length}`);
+
         // Filtrado lógico
         const filtered = rawData.filter(d => {
             if (currentMonth !== "all" && (d["Fecha de inicio"] || "").split('-')[1] !== currentMonth) return false;
@@ -67,6 +73,14 @@ function renderFromData(rawData) {
                 const mod = (d['MODULO-CURSO'] || '').toLowerCase();
                 const prog = (d['PROGRAMA'] || '').toLowerCase();
                 if (!mod.includes(q) && !prog.includes(q)) return false;
+            }
+            // Filtro para ocultar cursos iniciados
+            if (hideStartedCourses) {
+                const fechaInicio = d["Fecha de inicio"];
+                if (fechaInicio) {
+                    const hoy = new Date().toISOString().split('T')[0];
+                    if (fechaInicio < hoy) return false; // Ocultar si ya inició
+                }
             }
             return true;
         });
@@ -89,7 +103,7 @@ function renderFromData(rawData) {
         // Renderizado de Programas Agrupados
         Object.keys(programasMap).forEach(nombreProg => {
             const modulos = programasMap[nombreProg];
-            const progId = nombreProg.replace(/\s+/g, '-');
+            const progId = nombreProg.replace(/\s+/g, '-').replace(/[^a-z0-9\-_]/gi, '').toLowerCase();
             const modulosOrdenados = [...modulos].sort((a, b) => new Date(a["Fecha de inicio"]) - new Date(b["Fecha de inicio"]));
             const primerModulo = modulosOrdenados[0];
             const codigoProg = primerModulo["f_CODIGO_PROGRAMA"] || primerModulo["PROGRAMA"] || 'Sin Código';
@@ -260,6 +274,7 @@ document.getElementById('monthFilter').onchange = (e) => { currentMonth = e.targ
 document.getElementById('docenteFilter').onchange = (e) => { currentDocente = e.target.value; renderFromData(lastSnapshotData); };
 document.getElementById('programaFilter').onchange = (e) => { currentPrograma = e.target.value; renderFromData(lastSnapshotData); };
 document.getElementById('moduloFilter').oninput = (e) => { currentModuloQuery = e.target.value; renderFromData(lastSnapshotData); };
+document.getElementById('hideStartedFilter').onchange = (e) => { hideStartedCourses = e.target.checked; renderFromData(lastSnapshotData); };
 
 // Cerrar modal al clickear fuera
 window.onclick = (e) => {
