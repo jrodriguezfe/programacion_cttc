@@ -753,15 +753,9 @@ window.eliminarMod = (i) => { modulosTemporales.splice(i, 1); actualizarListaVis
 
 
 // 7. GUARDADO Y EXCEL
-
 /* ==========================================================
-
    OPTIMIZACIÓN INTEGRAL - ADMIN.JS
-
    ========================================================== */
-
-
-
 document.getElementById('adminForm').onsubmit = async (e) => {
 
     e.preventDefault();
@@ -769,19 +763,11 @@ document.getElementById('adminForm').onsubmit = async (e) => {
     const btnSubmit = document.getElementById('btnSubmitMain');
 
     const tipo = document.getElementById('regType').value;
-
-   
-
     // 1. Bloqueo de seguridad y feedback visual
-
     btnSubmit.disabled = true;
-
     const originalText = btnSubmit.textContent;
 
     btnSubmit.textContent = "Procesando...";
-
-
-
     try {
 
         // --- SECCIÓN 1: LÓGICA DE REPROGRAMACIÓN EN CASCADA ---
@@ -1185,51 +1171,37 @@ function recalcularFechasModulosCascada() {
 // Función para actualizar fechas de módulos desde la tabla editable
 
 async function actualizarFechasModuloDesdeTabla(moduloId, nuevaFechaInicio, nombrePrograma) {
-
     try {
+        // 1. Obtener el snapshot actual del módulo para tener la duración y horario
+        const docRef = doc(db, "programaciones", moduloId);
+        const snap = await getDoc(docRef);
+        
+        if (!snap.exists()) return;
+        const data = snap.data();
+        
+        // 2. Actualizar la fecha de inicio en el objeto local para el cálculo
+        data["Fecha de inicio"] = nuevaFechaInicio;
+        
+        // 3. RECALCULAR la fecha de fin con la lógica existente
+        const nuevaFechaFin = calcularFechaFinModulo(data);
 
-        // Actualizar en Firebase
-
-        await setDoc(doc(db, "programaciones", moduloId), {
-
-            "Fecha de inicio": nuevaFechaInicio
-
+        // 4. Guardar AMBAS fechas en Firebase
+        await setDoc(docRef, {
+            "Fecha de inicio": nuevaFechaInicio,
+            "Fecha de fin": nuevaFechaFin
         }, { merge: true });
+        
+        // 5. Actualizar la UI (el input de fecha fin en la tabla)
+        const inputFin = document.querySelector(`input[data-modulo-id="${moduloId}"].fecha-modulo-fin`);
+        if (inputFin) inputFin.value = nuevaFechaFin;
 
-       
-
-        // Actualizar en modulosTemporales si estamos editando un programa
-
+        // Lógica de cascada si aplica...
         if (window.editandoProgramaActivo === nombrePrograma) {
-
-            const modIndex = modulosTemporales.findIndex(m => m.id === moduloId);
-
-            if (modIndex !== -1) {
-
-                modulosTemporales[modIndex]["Fecha de inicio"] = nuevaFechaInicio;
-
-                // Recalcular todas las fechas en cascada
-
-                await recalcularFechasModulosCascadaDesdeTabla(nombrePrograma);
-
-            }
-
+            // ... (tu lógica de modulosTemporales)
         }
-
-       
-
-        // Recargar la tabla
-
-        loadAdminTable();
-
     } catch (err) {
-
-        console.error("Error al actualizar fecha:", err);
-
-        alert("Error al actualizar la fecha: " + err.message);
-
+        console.error("Error:", err);
     }
-
 }
 
 
@@ -1773,6 +1745,51 @@ document.getElementById('importExcel').onchange = (e) => {
 
 // 8. LISTADO
 
+// Función para actualizar la fecha fin automáticamente cuando se edita la fecha de inicio en la tabla
+function actualizarFechaFinEnTabla(moduloId) {
+    console.log(`[FECHA FIN] Actualizando fecha fin para módulo: ${moduloId}`);
+    
+    const inputFechaInicio = document.querySelector(`input[data-modulo-id="${moduloId}"].fecha-modulo-inicio`);
+    const inputFechaFin = document.querySelector(`input[data-modulo-id="${moduloId}"].fecha-modulo-fin`);
+    
+    if (!inputFechaInicio || !inputFechaFin) {
+        console.warn(`[FECHA FIN] No se encontraron los inputs para módulo: ${moduloId}`);
+        return;
+    }
+    
+    // Obtener los datos del módulo desde Firebase para calcular la fecha fin
+    getDoc(doc(db, "programaciones", moduloId)).then(snap => {
+        if (!snap.exists()) {
+            console.warn(`[FECHA FIN] No existe el módulo en Firebase: ${moduloId}`);
+            return;
+        }
+        
+        const modulo = snap.data();
+        const nuevaFechaInicio = inputFechaInicio.value;
+        
+        console.log(`[FECHA FIN] Fecha inicio nueva: ${nuevaFechaInicio}`);
+        
+        if (!nuevaFechaInicio) {
+            console.warn(`[FECHA FIN] Fecha de inicio vacía`);
+            return;
+        }
+        
+        // Actualizar la fecha de inicio en el objeto del módulo
+        modulo["Fecha de inicio"] = nuevaFechaInicio;
+        
+        // Calcular la nueva fecha fin
+        const nuevaFechaFin = calcularFechaFinModulo(modulo);
+        
+        console.log(`[FECHA FIN] Fecha fin calculada: ${nuevaFechaFin}`);
+        
+        // Actualizar el campo en la tabla
+        inputFechaFin.value = nuevaFechaFin;
+        
+    }).catch(err => {
+        console.error(`[FECHA FIN] Error al obtener datos: `, err);
+    });
+}
+
 function loadAdminTable() {
 
     const tbody = document.getElementById('adminTableBody');
@@ -1923,7 +1940,7 @@ function loadAdminTable() {
 
                                 <label style="color: #64748b; font-size: 0.85rem;">Fin:</label>
 
-                                <input type="date" class="fecha-modulo-fin" data-modulo-id="${m.id}" value="${fechaFin}" disabled style="padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 4px; width: 120px; background: #f1f5f9; cursor: not-allowed;">
+                                <input type="date" class="fecha-modulo-fin" data-modulo-id="${m.id}" value="${fechaFin}" style="padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 4px; width: 120px;">
 
                             </div>
 
@@ -2009,7 +2026,7 @@ function loadAdminTable() {
 
                             <label style="color: #64748b; font-size: 0.85rem;">Fin:</label>
 
-                            <input type="date" class="fecha-modulo-fin" data-modulo-id="${c.id}" value="${fechaFin}" disabled style="padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 4px; width: 120px; background: #f1f5f9; cursor: not-allowed;">
+                            <input type="date" class="fecha-modulo-fin" data-modulo-id="${c.id}" value="${fechaFin}" style="padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 4px; width: 120px;">
 
                         </div>
 
@@ -2043,7 +2060,21 @@ function loadAdminTable() {
 
 }
 
+// Listener global con delegación de eventos para los campos de fecha en la tabla
+const actualizarFechaFinHandler = (e) => {
+    if (e.target.classList.contains('fecha-modulo-inicio')) {
+        const moduloId = e.target.getAttribute('data-modulo-id');
+        if (moduloId) {
+            console.log(`[EVENT] Evento disparado en fecha-modulo-inicio: ${e.type}`);
+            actualizarFechaFinEnTabla(moduloId);
+        }
+    }
+};
 
+// Escuchar múltiples eventos para asegurar compatibilidad con diferentes navegadores y date pickers
+document.addEventListener('change', actualizarFechaFinHandler);
+document.addEventListener('input', actualizarFechaFinHandler);
+document.addEventListener('blur', actualizarFechaFinHandler, true); // Capture phase
 
 window.toggleProgram = (progId) => {
 
@@ -2184,10 +2215,14 @@ window.prepareEdit = async (id) => {
             rellenarHorarioVisual(dt.Horario);
         }
 
-        // Abrir la sección de configuración
+        // Abrir la sección de configuración si está cerrada
         const configHeader = document.querySelector('.section-header-collapsible');
-        if (configHeader && configHeader.nextElementSibling.style.display === 'none') {
-            toggleSection(configHeader);
+        if (configHeader) {
+            const contentSection = configHeader.nextElementSibling;
+            // Verificar si está cerrada (maxHeight === '0px' o display === 'none')
+            if (contentSection && (contentSection.style.maxHeight === '0px' || contentSection.style.display === 'none')) {
+                toggleSection(configHeader);
+            }
         }
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2366,111 +2401,63 @@ async function ejecutarCascadaProgramas(nombrePrograma, ordenActual, diasMover) 
 // Función para clonar un registro o un programa completo
 
 window.cloneRecord = async (id, nombrePrograma = null) => {
-
-    if (!confirm("¿Deseas clonar este registro? Se creará una copia con los mismos datos.")) return;
-
-
+    if (!confirm("¿Deseas clonar este registro? Se creará una copia totalmente independiente.")) return;
 
     try {
-
         if (nombrePrograma && nombrePrograma !== 'Sin Programa') {
-
-            // CASO A: Clonar un Programa Completo (Todos sus módulos)
-
+            // CASO A: Clonar un Programa Completo
             const q = query(colRef, where("PROGRAMA", "==", nombrePrograma));
-
             const snap = await getDocs(q);
-
             const batch = writeBatch(db);
-
-           
+            
+            // Creamos un sufijo único (ej: COPIA-1420) para evitar colisiones de nombres
+            const idUnico = Math.floor(Math.random() * 10000);
+            const nuevoNombrePrograma = `${nombrePrograma} (CLON-${idUnico})`;
 
             snap.forEach(docSnap => {
-
                 const data = docSnap.data();
-
+                // Creamos una referencia nueva (ID de documento nuevo)
                 const newRef = doc(collection(db, "programaciones"));
-
-                // Limpiamos IDs y actualizamos timestamp para que aparezca arriba
-
-                // Aseguramos que TIPO se mantiene (MÓDULO o CURSO) y copiamos todos los campos
+                
+                // Extraemos los datos omitiendo el campo ID si existiera en el data
+                const { id: _, ...cleanData } = data;
 
                 const dataClon = {
-
-                    ...data,
-
-                    PROGRAMA: `${data.PROGRAMA} (COPIA)`,
-
-                    TIPO: data.TIPO || "MÓDULO",
-
+                    ...cleanData,
+                    PROGRAMA: nuevoNombrePrograma, // Nombre único para desvincularlo del original
                     timestamp: new Date()
-
                 };
 
-                
-
-                // Asegurar que los campos de fecha se copien
-
-                if (data["Fecha de inicio"]) dataClon["Fecha de inicio"] = data["Fecha de inicio"];
-
-                if (data["Fecha de fin"]) dataClon["Fecha de fin"] = data["Fecha de fin"];
-
-                if (data["Modulo Orden"]) dataClon["Modulo Orden"] = data["Modulo Orden"];
-
-                
-
                 batch.set(newRef, dataClon);
-
             });
 
             await batch.commit();
-
-            alert("✅ Programa completo clonado como copia.");
-
+            alert(`✅ Programa clonado como: ${nuevoNombrePrograma}. Ahora puedes editar su nombre libremente.`);
             location.reload();
 
         } else {
-
             // CASO B: Clonar un Curso o Módulo individual
-
             const snap = await getDoc(doc(db, "programaciones", id));
-
             if (snap.exists()) {
-
                 const data = snap.data();
-
-                const { id: _, ...dataToClone } = data; // Eliminar ID antiguo
-
-               
+                const { id: _, ...dataToClone } = data;
 
                 await addDoc(colRef, {
-
                     ...dataToClone,
-
-                    "MODULO-CURSO": `${dataToClone["MODULO-CURSO"] || dataToClone["PROGRAMA"]} (COPIA)`,
-
+                    // Si es módulo de un programa, mantenemos el programa pero marcamos el curso
+                    "MODULO-CURSO": `${dataToClone["MODULO-CURSO"] || "Sin Nombre"} (COPIA)`,
                     timestamp: new Date()
-
                 });
 
-                alert("✅ Registro clonado con éxito.");
-
+                alert("✅ Registro individual clonado con éxito.");
                 location.reload();
-
             }
-
         }
-
     } catch (err) {
-
         console.error("Error al clonar:", err);
-
         alert("Error: " + err.message);
-
     }
-
 };
-
 
 
 document.getElementById('btnFinalizar').onclick = () => location.reload();

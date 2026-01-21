@@ -577,3 +577,18 @@ tr td { padding: 14px 12px; }
     position: relative;
     z-index: auto;
 }
+
+/* Quitar la flecha por defecto de summary en Chrome/Safari */
+summary::-webkit-details-marker {
+    display: none;
+}
+
+/* Rotar icono al abrir */
+details[open] summary span:last-child {
+    transform: rotate(180deg);
+}
+
+/* Efecto hover en las opciones del desplegable */
+#empresaCheckboxContainer label:hover {
+    background-color: #f1f5f9;
+}
