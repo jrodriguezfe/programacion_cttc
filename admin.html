@@ -21,27 +21,32 @@
         <main class="admin-content">
             <!-- SECCIÓN 1: LISTADO DE GESTIÓN (APARECE PRIMERO) -->
             <section id="tableManagementSection" class="form-container shadow">
-                <div class="section-title">
-                    <h2>Listado de Gestión</h2>
-                    <p>Seleccione un registro para editar sus datos o eliminarlo permanentemente.</p>
-                </div>
+                <header class="section-header-collapsible" onclick="toggleSection(this)">
+                    <div>
+                        <h2>Listado de Gestión</h2>
+                        <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #64748b; font-weight: normal;">Seleccione un registro para editar sus datos o eliminarlo permanentemente.</p>
+                    </div>
+                    <span class="toggle-icon" style="transform: rotate(180deg);">▼</span>
+                </header>
                 
-                <div class="table-container" style="overflow-x:auto; margin-top: 20px;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>NRC</th>
-                                <th>Programa / Curso / Módulo</th>
-                                <th style="text-align: center;" class="actions-th">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminTableBody"></tbody>
-                    </table>
+                <div class="section-content" style="display: block; max-height: none; overflow: visible;">
+                    <div class="table-container" style="overflow-x:auto; margin-top: 20px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>NRC</th>
+                                    <th>Programa / Curso / Módulo</th>
+                                    <th style="text-align: center;" class="actions-th">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
 
             <!-- SECCIÓN 2: CONFIGURACIÓN (COLLAPSIBLE) -->
-            <section class="form-container shadow" style="margin-top: 30px;">
+            <section id="configSection" class="form-container shadow" style="margin-top: 30px;">
                 <header class="section-header-collapsible" onclick="toggleSection(this)">
                     <h2>Configuración de Programación Académica</h2>
                     <span class="toggle-icon">▼</span>
@@ -115,15 +120,33 @@
             
             if (isHidden) {
                 content.style.display = 'block';
-                // Reflow para que scrollHeight sea calculado
+                content.style.overflow = 'hidden';
                 content.offsetHeight;
                 content.style.maxHeight = content.scrollHeight + 'px';
                 icon.style.transform = 'rotate(180deg)';
-            } else {
-                content.style.maxHeight = '0px';
-                icon.style.transform = 'rotate(0deg)';
+                
+                // Permitir crecimiento ilimitado después de la animación
                 setTimeout(() => {
-                    content.style.display = 'none';
+                    if (content.style.display !== 'none') {
+                        content.style.maxHeight = 'none';
+                        content.style.overflow = 'visible';
+                    }
+                }, 300);
+            } else {
+                // Fix para animar cierre si height es none/auto
+                if (!content.style.maxHeight || content.style.maxHeight === 'none') {
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                    content.offsetHeight;
+                }
+                content.style.overflow = 'hidden';
+                
+                requestAnimationFrame(() => {
+                    content.style.maxHeight = '0px';
+                    icon.style.transform = 'rotate(0deg)';
+                });
+
+                setTimeout(() => {
+                    if(content.style.maxHeight === '0px') content.style.display = 'none';
                 }, 300);
             }
         }

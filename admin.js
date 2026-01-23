@@ -618,6 +618,12 @@ window.prepareEditPrograma = async (nombrePrograma) => {
                 if (el) el.value = data[c] || "";
 
             });
+            
+            const elCod = document.getElementById('f_CODIGO_PROGRAMA');
+            if (elCod) {
+                elCod.value = data["CODIGO-PROGRAMA"] || data["f_CODIGO_PROGRAMA"] || "";
+                document.getElementById('group_CODIGO_PROGRAMA').style.display = 'block';
+            }
 
 
 
@@ -678,11 +684,12 @@ window.prepareEditPrograma = async (nombrePrograma) => {
             console.log(`[EDIT] ✅ Programa cargado exitosamente. Módulos temporales: ${modulosTemporales.length}`);
 
             // Abrir la sección de configuración si está cerrada
-            const configSection = document.querySelector('.section-header-collapsible');
-            if (configSection) {
-                const contentSection = configSection.nextElementSibling;
+            const configContainer = document.getElementById('configSection');
+            if (configContainer) {
+                const configHeader = configContainer.querySelector('.section-header-collapsible');
+                const contentSection = configHeader.nextElementSibling;
                 if (contentSection && contentSection.style.display === 'none') {
-                    configSection.click(); // Simular click para abrir
+                    configHeader.click(); // Simular click para abrir
                 }
             }
 
@@ -825,6 +832,9 @@ document.getElementById('adminForm').onsubmit = async (e) => {
             if (el) nCabecera[c] = el.value;
 
         });
+        
+        const elCod = document.getElementById('f_CODIGO_PROGRAMA');
+        if (elCod) nCabecera["CODIGO-PROGRAMA"] = elCod.value;
 
 
 
@@ -1689,7 +1699,7 @@ document.getElementById('btnExportExcel').onclick = async () => {
 
     const snap = await getDocs(colRef);
 
-    const cols = ["TIPO", ...CAMPOS_CABECERA, ...CAMPOS_GESTION, ...CAMPOS_CHECKBOX];
+    const cols = ["TIPO", "CODIGO-PROGRAMA", ...CAMPOS_CABECERA, ...CAMPOS_GESTION, ...CAMPOS_CHECKBOX];
 
     const data = snap.docs.map(d => {
 
@@ -2199,6 +2209,11 @@ window.prepareEdit = async (id) => {
             const el = document.getElementById(`f_${c.replace(/ /g, "_")}`);
             if (el) el.value = dt[c] || "";
         });
+        
+        const elCod = document.getElementById('f_CODIGO_PROGRAMA');
+        if (elCod) {
+            elCod.value = dt["CODIGO-PROGRAMA"] || dt["f_CODIGO_PROGRAMA"] || "";
+        }
 
         CAMPOS_CHECKBOX.forEach(c => {
             const el = document.getElementById(`f_${c.replace(/ /g, "_")}`);
@@ -2216,8 +2231,9 @@ window.prepareEdit = async (id) => {
         }
 
         // Abrir la sección de configuración si está cerrada
-        const configHeader = document.querySelector('.section-header-collapsible');
-        if (configHeader) {
+        const configContainer = document.getElementById('configSection');
+        if (configContainer) {
+            const configHeader = configContainer.querySelector('.section-header-collapsible');
             const contentSection = configHeader.nextElementSibling;
             // Verificar si está cerrada (maxHeight === '0px' o display === 'none')
             if (contentSection && (contentSection.style.maxHeight === '0px' || contentSection.style.display === 'none')) {
@@ -2225,7 +2241,15 @@ window.prepareEdit = async (id) => {
             }
         }
 
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Scroll hacia el formulario para editar (con retardo para permitir animación de apertura)
+        setTimeout(() => {
+            const formElement = document.getElementById('adminForm');
+            if (formElement) {
+                formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }, 300);
     }
 
 };
