@@ -120,6 +120,16 @@ function renderFromData(rawData) {
         // 4. Renderizado de Programas Agrupados
         Object.keys(programasMap).forEach(nombreProg => {
             const modulos = programasMap[nombreProg];
+
+            // Verificar si el Módulo 1 está presente en el filtro actual
+            // Si no está el módulo 1 (ej. filtro por mes posterior o ya inició y se ocultó), mostrar como filas independientes
+            const tieneModuloUno = modulos.some(m => (parseInt(m["Modulo Orden"]) || 0) === 1);
+
+            if (!tieneModuloUno) {
+                modulos.forEach(m => tbody.appendChild(createDataRow(m, 'curso-row-style')));
+                return;
+            }
+
             const progId = nombreProg.replace(/\s+/g, '-').replace(/[^a-z0-9\-_]/gi, '').toLowerCase();
             
             // Ordenar módulos por fecha de inicio
