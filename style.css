@@ -370,14 +370,33 @@ td { padding: 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.8
 }
 /* Optimización para 8 columnas */
 table {
-    table-layout: auto;
-    min-width: 1200px; /* Asegura que no se amontone en pantallas pequeñas */
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+/* Solo las tablas de gestión/datos masivos mantienen el scroll horizontal */
+.table-container table {
+    min-width: 1200px;
 }
 
 th, td {
-    padding: 0.75rem 0.5rem;
-    font-size: 0.8rem; /* Un poco más pequeño para que quepan todos los campos */
-    vertical-align: middle; /* Alineación vertical central */
+    padding: 12px 15px;
+    font-size: 0.85rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color);
+}
+
+th {
+    background-color: #f1f5f9;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 1px 0 var(--border-color);
 }
 
 .child-row-style td:first-child {
@@ -422,7 +441,7 @@ th, td {
     position: sticky;
     right: 0;
     background: #f1f5f9;
-    z-index: 3;
+    z-index: 20;
 }
 
 .action-button {
@@ -591,4 +610,52 @@ details[open] summary span:last-child {
 /* Efecto hover en las opciones del desplegable */
 #empresaCheckboxContainer label:hover {
     background-color: #f1f5f9;
+}
+
+/* --- DASHBOARD --- */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 2rem;
+}
+
+/* El Resumen General ocupa todo el ancho para dar espacio a las columnas de metas */
+.dashboard-grid .report-card:first-child {
+    grid-column: 1 / -1;
+}
+
+.report-card {
+    background: #f9fafb;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.report-card h3 {
+    font-size: 1.1rem;
+    color: var(--senati-blue);
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.report-table {
+    width: 100%;
+    font-size: 0.85rem;
+    border-collapse: collapse;
+    min-width: auto !important; /* Fuerza el ajuste al contenedor de la tarjeta */
+}
+
+.report-table th, .report-table td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.report-table tfoot td {
+    font-weight: bold;
+    background: #f0f9ff;
+    border-bottom: none;
 }

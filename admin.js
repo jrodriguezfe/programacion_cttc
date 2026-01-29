@@ -1753,6 +1753,428 @@ document.getElementById('importExcel').onchange = (e) => {
 
 
 
+// 8. DASHBOARD / INFORME MENSUAL
+let dashboardSelectedCompanies = [];
+let dashboardHasInit = false;
+window.lastDashboardDocs = [];
+const dashboardCardState = {}; // Estado para filtros individuales de tarjetas
+let dashboardGeneralMode = 'raw'; // 'raw' (Datos Reales) | 'adjusted' (Con Filtros)
+let dashboardShowHours = false; // Control de visibilidad de Horas-Alumno
+let dashboardSelectedYear = new Date().getFullYear().toString(); // Año seleccionado por defecto
+
+// Variables para instancias de gráficos
+let chartStudentsInstance = null;
+let chartIncomeInstance = null;
+
+const MESES = {
+    "01": "Enero", "02": "Febrero", "03": "Marzo", "04": "Abril",
+    "05": "Mayo", "06": "Junio", "07": "Julio", "08": "Agosto",
+    "09": "Septiembre", "10": "Octubre", "11": "Noviembre", "12": "Diciembre"
+};
+const ORDERED_MONTH_KEYS = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+const METAS_MENSUALES = {
+    "01": { students: 150, income: 120000 },
+    "02": { students: 180, income: 140000 },
+    "03": { students: 250, income: 200000 },
+    "04": { students: 200, income: 160000 },
+    "05": { students: 220, income: 180000 },
+    "06": { students: 210, income: 170000 },
+    "07": { students: 280, income: 220000 },
+    "08": { students: 300, income: 250000 },
+    "09": { students: 240, income: 190000 },
+    "10": { students: 230, income: 180000 },
+    "11": { students: 200, income: 160000 },
+    "12": { students: 180, income: 140000 }
+};
+
+function createMonthlyStructure() {
+    const structure = {};
+    for (const monthKey in MESES) {
+        structure[monthKey] = { students: 0, income: 0, hours: 0 };
+    }
+    structure.total = { students: 0, income: 0, hours: 0 };
+    return structure;
+}
+
+function renderDashboard(docs) {
+    window.lastDashboardDocs = docs; // Guardar referencia para filtrado
+    const dashboardContainer = document.getElementById('dashboardContainer');
+    const controlsContainer = document.getElementById('dashboardControls');
+    
+    if (!dashboardContainer) return;
+
+    // 1. Obtener lista de empresas únicas presentes en la data
+    const allCompanies = [...new Set(docs.map(d => d.EMPRESA || "Sin Empresa").filter(Boolean))].sort();
+
+    // 1b. Obtener lista de años únicos presentes en la data
+    const allYears = [...new Set(docs.map(d => {
+        if (!d['Fecha de inicio']) return null;
+        return d['Fecha de inicio'].split('-')[0];
+    }).filter(Boolean))].sort().reverse();
+
+    // Asegurar que el año seleccionado sea válido o por defecto el más reciente
+    if (allYears.length > 0 && !allYears.includes(dashboardSelectedYear)) {
+        if (!dashboardHasInit) dashboardSelectedYear = allYears[0];
+    }
+
+    // 2. Inicializar selección (todas marcadas por defecto al inicio)
+    if (!dashboardHasInit) {
+        dashboardSelectedCompanies = [...allCompanies];
+        dashboardHasInit = true;
+    }
+
+    // 3. Renderizar Controles (Checkboxes + Selector de Año)
+    if (controlsContainer) {
+        const checkboxesHTML = allCompanies.map(c => {
+            const checked = dashboardSelectedCompanies.includes(c) ? 'checked' : '';
+            return `
+                <label style="display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; background:white; padding:5px 10px; border:1px solid #cbd5e1; border-radius:15px; cursor:pointer; user-select:none;">
+                    <input type="checkbox" value="${c}" ${checked} onchange="toggleDashboardCompany(this)">
+                    ${c}
+                </label>
+            `;
+        }).join('');
+
+        const yearOptions = allYears.length > 0 
+            ? allYears.map(y => `<option value="${y}" ${y === dashboardSelectedYear ? 'selected' : ''}>${y}</option>`).join('')
+            : `<option value="${dashboardSelectedYear}">${dashboardSelectedYear}</option>`;
+
+        controlsContainer.innerHTML = `
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #e2e8f0; padding-bottom:10px; gap:10px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <strong style="font-size:0.9rem; color:#334155;">Año:</strong>
+                    <select onchange="changeDashboardYear(this.value)" style="padding:5px 10px; border-radius:6px; border:1px solid #cbd5e1; font-weight:bold; color:#0f172a; cursor:pointer;">
+                        ${yearOptions}
+                    </select>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <strong style="font-size:0.9rem; color:#334155;">Empresas:</strong>
+                    <button onclick="setAllDashboardCompanies(true)" style="font-size:0.75rem; color:#0ea5e9; background:none; border:none; cursor:pointer; text-decoration:underline;">Todas</button>
+                    <button onclick="setAllDashboardCompanies(false)" style="font-size:0.75rem; color:#64748b; background:none; border:none; cursor:pointer; text-decoration:underline;">Ninguna</button>
+                </div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">${checkboxesHTML}</div>
+        `;
+    }
+
+    const COMPANIES_OF_INTEREST = ["CTTC", "ADMINISTRADORES INDUSTRIALES", "CAMTEX"];
+    
+    const reports = {
+        general: createMonthlyStructure()
+    };
+    COMPANIES_OF_INTEREST.forEach(c => {
+        reports[c] = createMonthlyStructure();
+    });
+
+    docs.forEach(doc => {
+        // Procesar solo registros del año SELECCIONADO
+        if (!doc['Fecha de inicio'] || !doc['Fecha de inicio'].startsWith(dashboardSelectedYear)) return;
+
+        const month = doc['Fecha de inicio'].split('-')[1];
+        if (!month || !MESES[month]) return;
+
+        const students = parseInt(doc['#Participantes Real Total'] || 0);
+        const price = parseFloat(doc['Precio Sinfo'] || 0);
+        const income = students * price;
+        const duration = parseInt(doc['Duracion'] || doc['Duración'] || 0);
+        const totalHours = students * duration;
+        const company = doc['EMPRESA'];
+
+        // Acumular en el reporte general (Considerando filtros si el modo es 'adjusted')
+        if (dashboardSelectedCompanies.includes(company)) {
+            let effStudents = students;
+            let effIncome = income;
+            let effHours = totalHours;
+
+            if (dashboardGeneralMode === 'adjusted') {
+                const state = dashboardCardState[company];
+                if (state) {
+                    if (state.noSumStudents) {
+                        effStudents = 0; // Si se marcó "No sumar", cuenta como 0
+                        effHours = 0;
+                    }
+                    if (state.incomeDeduction > 0) {
+                        effIncome = effIncome * ((100 - state.incomeDeduction) / 100); // Aplica el descuento
+                    }
+                }
+            }
+
+            reports.general[month].students += effStudents;
+            reports.general[month].income += effIncome;
+            reports.general[month].hours += effHours;
+            reports.general.total.students += effStudents;
+            reports.general.total.income += effIncome;
+            reports.general.total.hours += effHours;
+        }
+
+        // Acumular en el reporte de empresa si corresponde
+        if (COMPANIES_OF_INTEREST.includes(company)) {
+            reports[company][month].students += students;
+            reports[company][month].income += income;
+            reports[company][month].hours += totalHours;
+            reports[company].total.students += students;
+            reports[company].total.income += income;
+            reports[company].total.hours += totalHours;
+        }
+    });
+
+    // Renderizar los reportes
+    let dashboardHTML = renderReportCard(`Resumen General ${dashboardSelectedYear}`, reports.general);
+    
+    // Agregar contenedores para los gráficos debajo del resumen general
+    dashboardHTML += `
+        <div class="report-card" style="height: 350px;"><canvas id="chartStudents"></canvas></div>
+        <div class="report-card" style="height: 350px;"><canvas id="chartIncome"></canvas></div>
+    `;
+
+    COMPANIES_OF_INTEREST.forEach(c => {
+        dashboardHTML += renderReportCard(`Empresa: ${c}`, reports[c], c);
+    });
+
+    dashboardContainer.innerHTML = dashboardHTML;
+
+    // Renderizar los gráficos después de que los elementos existan en el DOM
+    renderDashboardCharts(reports.general);
+}
+
+function renderDashboardCharts(generalData) {
+    const ctxS = document.getElementById('chartStudents');
+    const ctxI = document.getElementById('chartIncome');
+    if (!ctxS || !ctxI || typeof Chart === 'undefined') return;
+
+    const labels = ORDERED_MONTH_KEYS.map(k => MESES[k]);
+    const realStudents = ORDERED_MONTH_KEYS.map(k => generalData[k].students);
+    const metaStudents = ORDERED_MONTH_KEYS.map(k => METAS_MENSUALES[k].students);
+    const realIncome = ORDERED_MONTH_KEYS.map(k => generalData[k].income);
+    const metaIncome = ORDERED_MONTH_KEYS.map(k => METAS_MENSUALES[k].income);
+
+    if (chartStudentsInstance) chartStudentsInstance.destroy();
+    if (chartIncomeInstance) chartIncomeInstance.destroy();
+
+    const commonOptions = (title) => ({
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+            title: { display: true, text: title, font: { size: 15, weight: 'bold' }, padding: { bottom: 20 }, color: '#1e293b' }
+        },
+        scales: {
+            y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+        }
+    });
+
+    chartStudentsInstance = new Chart(ctxS, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                { label: 'Alumnos Reales', data: realStudents, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.4, pointRadius: 3 },
+                { label: 'Meta Alumnos', data: metaStudents, borderColor: '#94a3b8', borderDash: [5, 5], fill: false, tension: 0, pointRadius: 0 }
+            ]
+        },
+        options: commonOptions('Tendencia de Alumnos vs Meta')
+    });
+
+    chartIncomeInstance = new Chart(ctxI, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                { label: 'Ingresos Reales', data: realIncome, borderColor: '#0ea5e9', backgroundColor: 'rgba(14, 165, 233, 0.1)', fill: true, tension: 0.4, pointRadius: 3 },
+                { label: 'Meta Ingresos', data: metaIncome, borderColor: '#94a3b8', borderDash: [5, 5], fill: false, tension: 0, pointRadius: 0 }
+            ]
+        },
+        options: commonOptions('Tendencia de Ingresos vs Meta')
+    });
+}
+
+// Funciones globales para interacción con los filtros del dashboard
+window.changeDashboardYear = (year) => {
+    dashboardSelectedYear = year;
+    renderDashboard(window.lastDashboardDocs);
+};
+
+window.toggleDashboardCompany = (el) => {
+    const val = el.value;
+    if (el.checked) {
+        if (!dashboardSelectedCompanies.includes(val)) dashboardSelectedCompanies.push(val);
+    } else {
+        dashboardSelectedCompanies = dashboardSelectedCompanies.filter(c => c !== val);
+    }
+    // Re-renderizar usando los últimos datos guardados
+    renderDashboard(window.lastDashboardDocs);
+};
+
+window.setAllDashboardCompanies = (state) => {
+    const all = [...new Set(window.lastDashboardDocs.map(d => d.EMPRESA || "Sin Empresa").filter(Boolean))];
+    dashboardSelectedCompanies = state ? all : [];
+    renderDashboard(window.lastDashboardDocs);
+};
+
+window.toggleGeneralDashboardMode = () => {
+    dashboardGeneralMode = dashboardGeneralMode === 'raw' ? 'adjusted' : 'raw';
+    renderDashboard(window.lastDashboardDocs);
+};
+
+window.toggleDashboardHours = () => {
+    dashboardShowHours = !dashboardShowHours;
+    renderDashboard(window.lastDashboardDocs);
+};
+
+window.updateCardState = (companyKey, field, value) => {
+    if (!dashboardCardState[companyKey]) dashboardCardState[companyKey] = { noSumStudents: false, incomeDeduction: 0 };
+    
+    // Convertir a número si es deducción, o booleano si es checkbox
+    if (field === 'incomeDeduction') value = parseInt(value);
+    
+    dashboardCardState[companyKey][field] = value;
+    renderDashboard(window.lastDashboardDocs);
+};
+
+function renderReportCard(title, data, companyKey = null) {
+    // Clonar datos para no afectar el objeto original (importante para no dañar el Resumen General si se reusara)
+    let displayData = JSON.parse(JSON.stringify(data));
+    let controlsHTML = '';
+    let totalStudentsDisplay = `<strong>${displayData.total.students}</strong>`;
+    const isGeneral = !companyKey;
+
+    // Lógica específica si es una tarjeta de Empresa (tiene companyKey)
+    if (companyKey) {
+        // Inicializar estado si no existe
+        if (!dashboardCardState[companyKey]) {
+            dashboardCardState[companyKey] = { noSumStudents: false, incomeDeduction: 0 };
+        }
+        const state = dashboardCardState[companyKey];
+
+        // 1. Aplicar Deducción de Ingresos (-82% o -70%)
+        if (state.incomeDeduction > 0) {
+            const factor = (100 - state.incomeDeduction) / 100;
+            for (const monthKey in MESES) {
+                displayData[monthKey].income *= factor;
+            }
+            displayData.total.income *= factor;
+        }
+
+        // 2. Aplicar "No sumar total alumnos"
+        if (state.noSumStudents) {
+            totalStudentsDisplay = `<span style="color:#94a3b8; font-weight:normal;">--</span>`;
+        }
+
+        // 3. Generar HTML de los Controles
+        controlsHTML = `
+            <div style="margin-bottom: 15px; padding: 10px; background: #f1f5f9; border-radius: 8px; font-size: 0.85rem; border: 1px solid #e2e8f0;">
+                <div style="margin-bottom: 8px; font-weight: 600; color: #475569;">Filtros de Visualización:</div>
+                <label style="display:flex; align-items:center; gap:6px; margin-bottom:8px; cursor:pointer;">
+                    <input type="checkbox" onchange="updateCardState('${companyKey}', 'noSumStudents', this.checked)" ${state.noSumStudents ? 'checked' : ''}>
+                    No sumar total alumnos
+                </label>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <label>Ingresos:</label>
+                    <select onchange="updateCardState('${companyKey}', 'incomeDeduction', this.value)" style="padding: 4px; border-radius: 4px; border: 1px solid #cbd5e1; background:white;">
+                        <option value="0" ${state.incomeDeduction === 0 ? 'selected' : ''}>100% (Original)</option>
+                        <option value="82" ${state.incomeDeduction === 82 ? 'selected' : ''}>Restar 82% (Queda 18%)</option>
+                        <option value="70" ${state.incomeDeduction === 70 ? 'selected' : ''}>Restar 70% (Queda 30%)</option>
+                    </select>
+                </div>
+            </div>
+        `;
+    } else {
+        // Lógica para el Resumen General (Botón de Actualizar)
+        const isAdjusted = dashboardGeneralMode === 'adjusted';
+        controlsHTML = `
+            <div style="margin-bottom: 15px;">
+                <button onclick="toggleGeneralDashboardMode()" style="width:100%; padding:10px; background:${isAdjusted ? '#475569' : '#0ea5e9'}; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:8px; transition: background 0.2s;">
+                    ${isAdjusted ? '↩️ Restaurar Valores Reales' : '⚡ Actualizar con Filtros Aplicados'}
+                </button>
+                ${isAdjusted ? '<div style="margin-top:8px; font-size:0.75rem; color:#ef4444; text-align:center; background:#fef2f2; padding:4px; border-radius:4px; border:1px solid #fecaca;">⚠️ Visualizando proyección ajustada (Ingresos/Alumnos reducidos)</div>' : ''}
+                <label style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px; font-size:0.85rem; cursor:pointer; color:#64748b;">
+                    <input type="checkbox" onchange="toggleDashboardHours()" ${dashboardShowHours ? 'checked' : ''}>
+                    Mostrar columna de Horas-Alumno
+                </label>
+            </div>
+        `;
+    }
+
+    const currencyFormatter = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' });
+    const percentFormatter = new Intl.NumberFormat('es-PE', { style: 'percent', minimumFractionDigits: 0 });
+
+    const tableHeader = isGeneral 
+        ? `<thead><tr>
+            <th>Mes</th>
+            <th style="text-align:center;">Alumnos</th>
+            <th style="text-align:center; color:#64748b;">Meta</th>
+            <th style="text-align:center;">%</th>
+            <th style="text-align:center; display:${dashboardShowHours ? 'table-cell' : 'none'};">Horas-Alumno</th>
+            <th style="text-align:right;">Ingresos</th>
+            <th style="text-align:right; color:#64748b;">Meta</th>
+            <th style="text-align:center;">%</th>
+          </tr></thead>`
+        : `<thead><tr><th>Mes</th><th style="text-align:center;"># Alumnos</th><th style="text-align:right;">Ingresos</th></tr></thead>`;
+    
+    const tableRows = ORDERED_MONTH_KEYS.map(monthKey => {
+        const monthData = displayData[monthKey];
+        if (isGeneral) {
+            const meta = METAS_MENSUALES[monthKey] || { students: 0, income: 0 };
+            const pAlumnos = meta.students > 0 ? (monthData.students / meta.students) : 0;
+            const pIngresos = meta.income > 0 ? (monthData.income / meta.income) : 0;
+            return `
+                <tr>
+                    <td>${MESES[monthKey]}</td>
+                    <td style="text-align:center;">${monthData.students}</td>
+                    <td style="text-align:center; color:#64748b; font-size:0.75rem;">${meta.students}</td>
+                    <td style="text-align:center; font-weight:bold; color:${pAlumnos >= 1 ? '#10b981' : '#f59e0b'}">${percentFormatter.format(pAlumnos)}</td>
+                    <td style="text-align:center; display:${dashboardShowHours ? 'table-cell' : 'none'};">${monthData.hours.toLocaleString()}</td>
+                    <td style="text-align:right;">${currencyFormatter.format(monthData.income)}</td>
+                    <td style="text-align:right; color:#64748b; font-size:0.75rem;">${currencyFormatter.format(meta.income)}</td>
+                    <td style="text-align:center; font-weight:bold; color:${pIngresos >= 1 ? '#10b981' : '#f59e0b'}">${percentFormatter.format(pIngresos)}</td>
+                </tr>
+            `;
+        } else {
+            return `
+                <tr>
+                    <td>${MESES[monthKey]}</td>
+                    <td style="text-align:center;">${monthData.students}</td>
+                    <td style="text-align:right;">${currencyFormatter.format(monthData.income)}</td>
+                </tr>
+            `;
+        }
+    }).join('');
+
+    let footerHTML = '';
+    if (isGeneral) {
+        const totalMetaStudents = Object.values(METAS_MENSUALES).reduce((a, b) => a + b.students, 0);
+        const totalMetaIncome = Object.values(METAS_MENSUALES).reduce((a, b) => a + b.income, 0);
+        const totalPAlumnos = totalMetaStudents > 0 ? displayData.total.students / totalMetaStudents : 0;
+        const totalPIngresos = totalMetaIncome > 0 ? displayData.total.income / totalMetaIncome : 0;
+
+        footerHTML = `<tfoot><tr>
+            <td><strong>Total</strong></td>
+            <td style="text-align:center;"><strong>${displayData.total.students}</strong></td>
+            <td style="text-align:center;"><strong>${totalMetaStudents}</strong></td>
+            <td style="text-align:center;"><strong>${percentFormatter.format(totalPAlumnos)}</strong></td>
+            <td style="text-align:center; display:${dashboardShowHours ? 'table-cell' : 'none'};"><strong>${displayData.total.hours.toLocaleString()}</strong></td>
+            <td style="text-align:right;"><strong>${currencyFormatter.format(displayData.total.income)}</strong></td>
+            <td style="text-align:right;"><strong>${currencyFormatter.format(totalMetaIncome)}</strong></td>
+            <td style="text-align:center;"><strong>${percentFormatter.format(totalPIngresos)}</strong></td>
+        </tr></tfoot>`;
+    } else {
+        footerHTML = `<tfoot><tr><td><strong>Total</strong></td><td style="text-align:center;">${totalStudentsDisplay}</td><td style="text-align:right;"><strong>${currencyFormatter.format(displayData.total.income)}</strong></td></tr></tfoot>`;
+    }
+
+    return `
+        <div class="report-card">
+            <h3>${title}</h3>
+            ${controlsHTML}
+            <table class="report-table">
+                ${tableHeader}
+                <tbody>${tableRows}</tbody>
+                ${footerHTML}
+            </table>
+        </div>
+    `;
+}
+
 // 8. LISTADO
 
 // Función para actualizar la fecha fin automáticamente cuando se edita la fecha de inicio en la tabla
@@ -1811,6 +2233,9 @@ function loadAdminTable() {
         tbody.innerHTML = '';
 
         const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // Renderizar el dashboard con los datos actualizados
+        renderDashboard(docs);
 
 
 

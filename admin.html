@@ -109,10 +109,26 @@
                     </div>
                 </div>
             </section>
+
+            <!-- SECCIÓN 4: DASHBOARD / INFORME MENSUAL -->
+            <section id="dashboardSection" class="form-container shadow" style="margin-top: 30px;">
+                <header class="section-header-collapsible" onclick="toggleSection(this)">
+                    <div>
+                        <h2>Dashboard / Informe Mensual</h2>
+                        <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #64748b; font-weight: normal;">Resumen de alumnos e ingresos por mes.</p>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </header>
+                <div class="section-content" style="display: none; max-height: 0px;">
+                    <div id="dashboardControls" style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;"></div>
+                    <div id="dashboardContainer" class="dashboard-grid"></div>
+                </div>
+            </section>
         </main>
     </div>
 
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script>
         // Función para toggle de secciones collapsibles
