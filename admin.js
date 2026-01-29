@@ -2484,6 +2484,35 @@ window.cloneRecord = async (id, nombrePrograma = null) => {
 };
 
 
+// Selección de elementos
+const inputNRC = document.getElementById('filterNRC');
+const tablaBody = document.getElementById('adminTableBody');
+
+// Función principal de filtrado
+function filtrarTabla() {
+    const valNRC = inputNRC ? inputNRC.value.toLowerCase() : "";
+
+    // Obtenemos todas las filas del cuerpo de la tabla
+    const filas = tablaBody.getElementsByTagName('tr');
+
+    for (let i = 0; i < filas.length; i++) {
+        // Asumiendo el orden de tus celdas: 0=NRC, 1=Nombre/Programa
+        const textoNRC = filas[i].getElementsByTagName('td')[0]?.textContent.toLowerCase() || "";
+
+        // Verificamos si la fila cumple con TODOS los filtros activos
+        const coincideNRC = textoNRC.includes(valNRC);
+
+        if (coincideNRC) {
+            filas[i].style.display = ""; // Mostrar
+        } else {
+            filas[i].style.display = "none"; // Ocultar
+        }
+    }
+}
+
+// Escuchadores de eventos para tiempo real
+if (inputNRC) inputNRC.addEventListener('input', filtrarTabla);
+
 document.getElementById('btnFinalizar').onclick = () => location.reload();
 
 document.getElementById('btnLogout').onclick = () => signOut(auth);

@@ -26,10 +26,13 @@
                         <h2>Listado de Gestión</h2>
                         <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #64748b; font-weight: normal;">Seleccione un registro para editar sus datos o eliminarlo permanentemente.</p>
                     </div>
-                    <span class="toggle-icon" style="transform: rotate(180deg);">▼</span>
+                    <span class="toggle-icon">▼</span>
                 </header>
                 
-                <div class="section-content" style="display: block; max-height: none; overflow: visible;">
+                <div class="section-content" style="display: block; max-height: 0px; overflow: hidden;">
+                    <div class="filters-admin" style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+                        <input type="text" id="filterNRC" placeholder="Filtrar por NRC..." style="padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; flex: 1; min-width: 120px;">
+                    </div>
                     <div class="table-container" style="overflow-x:auto; margin-top: 20px;">
                         <table>
                             <thead>
@@ -146,9 +149,6 @@
                     icon.style.transform = 'rotate(0deg)';
                 });
 
-                setTimeout(() => {
-                    if(content.style.maxHeight === '0px') content.style.display = 'none';
-                }, 300);
             }
         }
     </script>
