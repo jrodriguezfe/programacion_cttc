@@ -21,6 +21,7 @@ const CAMPOS_MODAL = ["Part_Programa", "Part_Curso", "Part_Beca", "Part_Pago_Pro
 
 // Estado de la aplicación
 let selectedDocId = null;
+let currentYear = "all";
 let currentMonth = "all";
 let currentDocente = "all";
 let currentPrograma = "all";
@@ -60,6 +61,9 @@ function renderFromData(rawData) {
 
         // 1. Filtrado lógico integral
         const filtered = rawData.filter(d => {
+            // Filtro de Año
+            if (currentYear !== "all" && (d["Fecha de inicio"] || "").split('-')[0] !== currentYear) return false;
+
             // Filtro de Mes
             if (currentMonth !== "all" && (d["Fecha de inicio"] || "").split('-')[1] !== currentMonth) return false;
             
@@ -209,12 +213,25 @@ function populateFilterOptions(rawData) {
     const docentesSet = new Set();
     const programasSet = new Set();
     const empresasSet = new Set();
+    const yearsSet = new Set();
 
     rawData.forEach(d => {
         if (d.Docente) d.Docente.split(',').map(s => s.trim()).forEach(s => { if (s) docentesSet.add(s); });
         if (d.PROGRAMA) programasSet.add(d.PROGRAMA);
         if (d.EMPRESA) empresasSet.add(d.EMPRESA);
+        if (d["Fecha de inicio"]) {
+            const y = d["Fecha de inicio"].split('-')[0];
+            if (y) yearsSet.add(y);
+        }
     });
+
+    const ySel = document.getElementById('yearFilter');
+    if (ySel) {
+        const val = ySel.value || 'all';
+        ySel.innerHTML = '<option value="all">Todos los años</option>' + 
+            Array.from(yearsSet).sort().reverse().map(y => `<option value="${y}">${y}</option>`).join('');
+        ySel.value = (val === 'all' || Array.from(yearsSet).includes(val)) ? val : 'all';
+    }
 
     // Filtros de Docente y Programa (Selectores estándar)
     const dSel = document.getElementById('docenteFilter');
@@ -358,6 +375,7 @@ const closeModal = () => {
 document.getElementById('btnCloseModal').onclick = closeModal;
 
 // Eventos de Filtros
+document.getElementById('yearFilter').onchange = (e) => { currentYear = e.target.value; renderFromData(lastSnapshotData); };
 document.getElementById('monthFilter').onchange = (e) => { currentMonth = e.target.value; renderFromData(lastSnapshotData); };
 document.getElementById('docenteFilter').onchange = (e) => { currentDocente = e.target.value; renderFromData(lastSnapshotData); };
 document.getElementById('programaFilter').onchange = (e) => { currentPrograma = e.target.value; renderFromData(lastSnapshotData); };
