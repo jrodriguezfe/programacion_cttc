@@ -1760,7 +1760,15 @@ window.lastDashboardDocs = [];
 const dashboardCardState = {}; // Estado para filtros individuales de tarjetas
 let dashboardGeneralMode = 'raw'; // 'raw' (Datos Reales) | 'adjusted' (Con Filtros)
 let dashboardShowHours = false; // Control de visibilidad de Horas-Alumno
+let dashboardShowNRC = false; // Control de visibilidad de Cant. NRC
+let dashboardShowPatrocinio = false; // Control de visibilidad de Patrocinio
+let dashboardShowBeca = false; // Control de visibilidad de Beca
+let dashboardShowPago = false; // Control de visibilidad de Pago
+let dashboardShowIngresoPatrocinio = false; // Control de visibilidad de Ingreso Patrocinio
+let dashboardShowIngresoPago = false; // Control de visibilidad de Ingreso Pago
+let dashboardHideGoals = false; // Control de visibilidad de Metas y %
 let dashboardSelectedYear = new Date().getFullYear().toString(); // Año seleccionado por defecto
+let dashboardSelectedMonth = 'all'; // Mes seleccionado por defecto
 
 // Variables para instancias de gráficos
 let chartStudentsInstance = null;
@@ -1773,26 +1781,26 @@ const MESES = {
 };
 const ORDERED_MONTH_KEYS = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
 const METAS_MENSUALES = {
-    "01": { students: 150, income: 120000 },
-    "02": { students: 180, income: 140000 },
-    "03": { students: 250, income: 200000 },
-    "04": { students: 200, income: 160000 },
-    "05": { students: 220, income: 180000 },
-    "06": { students: 210, income: 170000 },
-    "07": { students: 280, income: 220000 },
-    "08": { students: 300, income: 250000 },
-    "09": { students: 240, income: 190000 },
-    "10": { students: 230, income: 180000 },
-    "11": { students: 200, income: 160000 },
-    "12": { students: 180, income: 140000 }
+    "01": { students: 150, income: 60834 },
+    "02": { students: 180, income: 133837 },
+    "03": { students: 250, income: 133837 },
+    "04": { students: 200, income: 133837 },
+    "05": { students: 220, income: 133837 },
+    "06": { students: 210, income: 133837 },
+    "07": { students: 280, income: 133837 },
+    "08": { students: 300, income: 133837 },
+    "09": { students: 240, income: 133837 },
+    "10": { students: 230, income: 133837 },
+    "11": { students: 200, income: 133837 },
+    "12": { students: 180, income: 60834 }
 };
 
 function createMonthlyStructure() {
     const structure = {};
     for (const monthKey in MESES) {
-        structure[monthKey] = { students: 0, income: 0, hours: 0 };
+        structure[monthKey] = { students: 0, income: 0, hours: 0, nrcCount: 0, beca: 0, pago: 0, patrocinio: 0, ingresoPatrocinio: 0, ingresoPago: 0 };
     }
-    structure.total = { students: 0, income: 0, hours: 0 };
+    structure.total = { students: 0, income: 0, hours: 0, nrcCount: 0, beca: 0, pago: 0, patrocinio: 0, ingresoPatrocinio: 0, ingresoPago: 0 };
     return structure;
 }
 
@@ -1835,6 +1843,10 @@ function renderDashboard(docs) {
             `;
         }).join('');
 
+        const monthOptions = ['all', ...ORDERED_MONTH_KEYS].map(m => 
+            `<option value="${m}" ${m === dashboardSelectedMonth ? 'selected' : ''}>${m === 'all' ? 'Todos los meses' : MESES[m]}</option>`
+        ).join('');
+
         const yearOptions = allYears.length > 0 
             ? allYears.map(y => `<option value="${y}" ${y === dashboardSelectedYear ? 'selected' : ''}>${y}</option>`).join('')
             : `<option value="${dashboardSelectedYear}">${dashboardSelectedYear}</option>`;
@@ -1845,6 +1857,10 @@ function renderDashboard(docs) {
                     <strong style="font-size:0.9rem; color:#334155;">Año:</strong>
                     <select onchange="changeDashboardYear(this.value)" style="padding:5px 10px; border-radius:6px; border:1px solid #cbd5e1; font-weight:bold; color:#0f172a; cursor:pointer;">
                         ${yearOptions}
+                    </select>
+                    <strong style="font-size:0.9rem; color:#334155; margin-left:10px;">Mes:</strong>
+                    <select onchange="changeDashboardMonth(this.value)" style="padding:5px 10px; border-radius:6px; border:1px solid #cbd5e1; font-weight:bold; color:#0f172a; cursor:pointer;">
+                        ${monthOptions}
                     </select>
                 </div>
                 <div style="display:flex; gap:10px;">
@@ -1873,54 +1889,129 @@ function renderDashboard(docs) {
         const month = doc['Fecha de inicio'].split('-')[1];
         if (!month || !MESES[month]) return;
 
+        // Filtro de Mes
+        if (dashboardSelectedMonth !== 'all' && month !== dashboardSelectedMonth) return;
+
+        // --- VARIABLES BASE ---
+        const company = doc['EMPRESA'] || "Sin Empresa";
         const students = parseInt(doc['#Participantes Real Total'] || 0);
         const price = parseFloat(doc['Precio Sinfo'] || 0);
-        const income = students * price;
         const duration = parseInt(doc['Duracion'] || doc['Duración'] || 0);
+        
+        const beca = parseInt(doc['Part_Beca'] || 0);
+        const pago = (parseInt(doc['Part_Pago_Programa']) || 0) + (parseInt(doc['Part_Pago_Curso']) || 0);
+        const patrocinio = students - beca - pago;
+        
+        const ingresoPatrocinio = patrocinio * price;
+        const ingresoPago = pago * price;
+        const totalIncome = ingresoPatrocinio + ingresoPago; // Ingreso calculado
         const totalHours = students * duration;
-        const company = doc['EMPRESA'];
+        const hasNRC = !!doc.NRC;
 
-        // Acumular en el reporte general (Considerando filtros si el modo es 'adjusted')
-        if (dashboardSelectedCompanies.includes(company)) {
-            let effStudents = students;
-            let effIncome = income;
-            let effHours = totalHours;
+        // --- LÓGICA DE ACUMULACIÓN GENERAL (EFECTIVA) ---
+        let effStudents = students;
+        let effIncome = totalIncome;
+        let effHours = totalHours;
+        let effHasNRC = hasNRC;
+        let effBeca = beca;
+        let effPago = pago;
+        let effPatrocinio = patrocinio;
+        let effIngresoPatrocinio = ingresoPatrocinio;
+        let effIngresoPago = ingresoPago;
 
-            if (dashboardGeneralMode === 'adjusted') {
-                const state = dashboardCardState[company];
-                if (state) {
-                    if (state.noSumStudents) {
-                        effStudents = 0; // Si se marcó "No sumar", cuenta como 0
-                        effHours = 0;
-                    }
-                    if (state.incomeDeduction > 0) {
-                        effIncome = effIncome * ((100 - state.incomeDeduction) / 100); // Aplica el descuento
-                    }
+        let includeInGeneral = false;
+
+        if (dashboardGeneralMode === 'adjusted') {
+            // Solo incluir empresas clave si están seleccionadas
+            if (COMPANIES_OF_INTEREST.includes(company) && dashboardSelectedCompanies.includes(company)) {
+                includeInGeneral = true;
+                const state = dashboardCardState[company] || { noSumStudents: false, noSumNRC: false, incomeDeduction: 0 };
+                
+                if (state.noSumNRC || state.noSumStudents) {
+                    effHasNRC = state.noSumNRC ? false : effHasNRC;
+                    effStudents = 0;
+                    effHours = 0;
+                    effBeca = 0;
+                    effPago = 0;
+                    effPatrocinio = 0;
+                }
+                if (state.incomeDeduction > 0) {
+                    const factor = (100 - state.incomeDeduction) / 100;
+                    effIncome *= factor;
+                    effIngresoPatrocinio *= factor;
+                    effIngresoPago *= factor;
                 }
             }
+        } else {
+            // Modo RAW: Sumar todo lo que esté marcado en el filtro superior
+            if (dashboardSelectedCompanies.includes(company)) {
+                includeInGeneral = true;
+            }
+        }
 
-            reports.general[month].students += effStudents;
-            reports.general[month].income += effIncome;
-            reports.general[month].hours += effHours;
+        if (includeInGeneral) {
+            const target = reports.general[month];
+            target.students += effStudents;
+            target.income += effIncome;
+            target.hours += effHours;
+            target.nrcCount += effHasNRC ? 1 : 0;
+            target.beca += effBeca;
+            target.pago += effPago;
+            target.patrocinio += effPatrocinio;
+            target.ingresoPatrocinio += effIngresoPatrocinio;
+            target.ingresoPago += effIngresoPago;
+
+            // Totales anuales
             reports.general.total.students += effStudents;
             reports.general.total.income += effIncome;
             reports.general.total.hours += effHours;
+            reports.general.total.nrcCount += effHasNRC ? 1 : 0;
+            reports.general.total.beca += effBeca;
+            reports.general.total.pago += effPago;
+            reports.general.total.patrocinio += effPatrocinio;
+            reports.general.total.ingresoPatrocinio += effIngresoPatrocinio;
+            reports.general.total.ingresoPago += effIngresoPago;
         }
 
-        // Acumular en el reporte de empresa si corresponde
+        // --- ACUMULACIÓN POR EMPRESA (SIEMPRE RAW PARA LA TARJETA INDIVIDUAL) ---
         if (COMPANIES_OF_INTEREST.includes(company)) {
-            reports[company][month].students += students;
-            reports[company][month].income += income;
-            reports[company][month].hours += totalHours;
+            const rep = reports[company][month];
+            rep.students += students;
+            rep.income += totalIncome;
+            rep.hours += totalHours;
+            rep.nrcCount += hasNRC ? 1 : 0;
+            
             reports[company].total.students += students;
-            reports[company].total.income += income;
+            reports[company].total.income += totalIncome;
             reports[company].total.hours += totalHours;
+            reports[company].total.nrcCount += hasNRC ? 1 : 0;
         }
+    });
+
+
+
+
+    const detailedDocs = docs.filter(doc => {
+        if (!doc['Fecha de inicio'] || !doc['Fecha de inicio'].startsWith(dashboardSelectedYear)) return false;
+        const month = doc['Fecha de inicio'].split('-')[1];
+        if (dashboardSelectedMonth !== 'all' && month !== dashboardSelectedMonth) return false;
+        
+        const company = doc.EMPRESA || "Sin Empresa";
+        if (!dashboardSelectedCompanies.includes(company)) return false;
+
+        // En modo ajustado, la tabla solo debe mostrar las empresas de interés
+        if (dashboardGeneralMode === 'adjusted') {
+            return COMPANIES_OF_INTEREST.includes(company);
+        }
+        return true;
     });
 
     // Renderizar los reportes
     let dashboardHTML = renderReportCard(`Resumen General ${dashboardSelectedYear}`, reports.general);
     
+    // Tabla detallada de NRCs
+    dashboardHTML += renderDetailedNRCTable(detailedDocs);
+
     // Agregar contenedores para los gráficos debajo del resumen general
     dashboardHTML += `
         <div class="report-card" style="height: 350px;"><canvas id="chartStudents"></canvas></div>
@@ -1932,6 +2023,10 @@ function renderDashboard(docs) {
     });
 
     dashboardContainer.innerHTML = dashboardHTML;
+
+    // Actualizar campo oculto con el total de NRCs
+    const hiddenNRC = document.getElementById('hiddenTotalNRC');
+    if (hiddenNRC) hiddenNRC.value = reports.general.total.nrcCount;
 
     // Renderizar los gráficos después de que los elementos existan en el DOM
     renderDashboardCharts(reports.general);
@@ -1995,6 +2090,11 @@ window.changeDashboardYear = (year) => {
     renderDashboard(window.lastDashboardDocs);
 };
 
+window.changeDashboardMonth = (month) => {
+    dashboardSelectedMonth = month;
+    renderDashboard(window.lastDashboardDocs);
+};
+
 window.toggleDashboardCompany = (el) => {
     const val = el.value;
     if (el.checked) {
@@ -2022,8 +2122,66 @@ window.toggleDashboardHours = () => {
     renderDashboard(window.lastDashboardDocs);
 };
 
+window.toggleDashboardNRC = () => {
+    dashboardShowNRC = !dashboardShowNRC;
+    renderDashboard(window.lastDashboardDocs);
+};
+
+window.toggleDashboardPatrocinio = () => {
+    dashboardShowPatrocinio = !dashboardShowPatrocinio;
+    renderDashboard(window.lastDashboardDocs);
+};
+
+window.toggleDashboardBeca = () => {
+    dashboardShowBeca = !dashboardShowBeca;
+    renderDashboard(window.lastDashboardDocs);
+};
+
+window.toggleDashboardPago = () => {
+    dashboardShowPago = !dashboardShowPago;
+    renderDashboard(window.lastDashboardDocs);
+};
+
+window.toggleDashboardIngresoPatrocinio = () => {
+    dashboardShowIngresoPatrocinio = !dashboardShowIngresoPatrocinio;
+    renderDashboard(window.lastDashboardDocs);
+};
+
+window.toggleDashboardIngresoPago = () => {
+    dashboardShowIngresoPago = !dashboardShowIngresoPago;
+    renderDashboard(window.lastDashboardDocs);
+};
+
+window.toggleDashboardGoals = () => {
+    dashboardHideGoals = !dashboardHideGoals;
+    renderDashboard(window.lastDashboardDocs);
+};
+
+window.downloadNRCTableImage = () => {
+    const element = document.getElementById('detailedNRCTableContainer');
+    if (!element) return;
+
+    // Ocultar el botón de captura temporalmente para que no aparezca en la imagen
+    const btn = element.querySelector('.btn-capture');
+    if (btn) btn.style.display = 'none';
+
+    html2canvas(element, {
+        backgroundColor: "#ffffff",
+        scale: 2, // Mayor resolución
+        logging: false,
+        useCORS: true
+    }).then(canvas => {
+        if (btn) btn.style.display = '';
+        const link = document.createElement('a');
+        const date = new Date().toISOString().split('T')[0];
+        link.download = `Detalle_NRC_${dashboardSelectedYear}_Mes_${dashboardSelectedMonth}_${date}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+    });
+};
+
 window.updateCardState = (companyKey, field, value) => {
-    if (!dashboardCardState[companyKey]) dashboardCardState[companyKey] = { noSumStudents: false, incomeDeduction: 0 };
+    if (!dashboardCardState[companyKey]) dashboardCardState[companyKey] = { noSumStudents: false, noSumNRC: false, incomeDeduction: 0 };
     
     // Convertir a número si es deducción, o booleano si es checkbox
     if (field === 'incomeDeduction') value = parseInt(value);
@@ -2043,7 +2201,7 @@ function renderReportCard(title, data, companyKey = null) {
     if (companyKey) {
         // Inicializar estado si no existe
         if (!dashboardCardState[companyKey]) {
-            dashboardCardState[companyKey] = { noSumStudents: false, incomeDeduction: 0 };
+            dashboardCardState[companyKey] = { noSumStudents: false, noSumNRC: false, incomeDeduction: 0 };
         }
         const state = dashboardCardState[companyKey];
 
@@ -2069,6 +2227,10 @@ function renderReportCard(title, data, companyKey = null) {
                     <input type="checkbox" onchange="updateCardState('${companyKey}', 'noSumStudents', this.checked)" ${state.noSumStudents ? 'checked' : ''}>
                     No sumar total alumnos
                 </label>
+                <label style="display:flex; align-items:center; gap:6px; margin-bottom:8px; cursor:pointer;">
+                    <input type="checkbox" onchange="updateCardState('${companyKey}', 'noSumNRC', this.checked)" ${state.noSumNRC ? 'checked' : ''}>
+                    No sumar total de NRC
+                </label>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <label>Ingresos:</label>
                     <select onchange="updateCardState('${companyKey}', 'incomeDeduction', this.value)" style="padding: 4px; border-radius: 4px; border: 1px solid #cbd5e1; background:white;">
@@ -2092,6 +2254,34 @@ function renderReportCard(title, data, companyKey = null) {
                     <input type="checkbox" onchange="toggleDashboardHours()" ${dashboardShowHours ? 'checked' : ''}>
                     Mostrar columna de Horas-Alumno
                 </label>
+                <label style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:5px; font-size:0.85rem; cursor:pointer; color:#64748b;">
+                    <input type="checkbox" onchange="toggleDashboardNRC()" ${dashboardShowNRC ? 'checked' : ''}>
+                    Mostrar columna de Cant. NRC
+                </label>
+                <label style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:5px; font-size:0.85rem; cursor:pointer; color:#64748b;">
+                    <input type="checkbox" onchange="toggleDashboardPatrocinio()" ${dashboardShowPatrocinio ? 'checked' : ''}>
+                    Mostrar Alumnos Patrocinio
+                </label>
+                <label style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:5px; font-size:0.85rem; cursor:pointer; color:#64748b;">
+                    <input type="checkbox" onchange="toggleDashboardBeca()" ${dashboardShowBeca ? 'checked' : ''}>
+                    Mostrar Alumnos Beca
+                </label>
+                <label style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:5px; font-size:0.85rem; cursor:pointer; color:#64748b;">
+                    <input type="checkbox" onchange="toggleDashboardPago()" ${dashboardShowPago ? 'checked' : ''}>
+                    Mostrar Alumnos Pago
+                </label>
+                <label style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:5px; font-size:0.85rem; cursor:pointer; color:#64748b;">
+                    <input type="checkbox" onchange="toggleDashboardIngresoPatrocinio()" ${dashboardShowIngresoPatrocinio ? 'checked' : ''}>
+                    Mostrar Ingresos Patrocinio
+                </label>
+                <label style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:5px; font-size:0.85rem; cursor:pointer; color:#64748b;">
+                    <input type="checkbox" onchange="toggleDashboardIngresoPago()" ${dashboardShowIngresoPago ? 'checked' : ''}>
+                    Mostrar Ingresos Pago
+                </label>
+                <label style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:5px; font-size:0.85rem; cursor:pointer; color:#64748b;">
+                    <input type="checkbox" onchange="toggleDashboardGoals()" ${dashboardHideGoals ? 'checked' : ''}>
+                    Ocultar Metas y % de avance
+                </label>
             </div>
         `;
     }
@@ -2103,16 +2293,26 @@ function renderReportCard(title, data, companyKey = null) {
         ? `<thead><tr>
             <th>Mes</th>
             <th style="text-align:center;">Alumnos</th>
-            <th style="text-align:center; color:#64748b;">Meta</th>
-            <th style="text-align:center;">%</th>
+            <th style="text-align:center; color:#64748b; display:${dashboardHideGoals ? 'none' : 'table-cell'};">Meta</th>
+            <th style="text-align:center; display:${dashboardHideGoals ? 'none' : 'table-cell'};">%</th>
             <th style="text-align:center; display:${dashboardShowHours ? 'table-cell' : 'none'};">Horas-Alumno</th>
+            <th style="text-align:center; display:${dashboardShowNRC ? 'table-cell' : 'none'};">Cant. NRC</th>
+            <th style="text-align:center; display:${dashboardShowPatrocinio ? 'table-cell' : 'none'};">Patrocinio</th>
+            <th style="text-align:center; display:${dashboardShowBeca ? 'table-cell' : 'none'};">Beca</th>
+            <th style="text-align:center; display:${dashboardShowPago ? 'table-cell' : 'none'};">Pago</th>
+            <th style="text-align:right; display:${dashboardShowIngresoPatrocinio ? 'table-cell' : 'none'};">Ing. Patrocinio</th>
+            <th style="text-align:right; display:${dashboardShowIngresoPago ? 'table-cell' : 'none'};">Ing. Pago</th>
             <th style="text-align:right;">Ingresos</th>
-            <th style="text-align:right; color:#64748b;">Meta</th>
-            <th style="text-align:center;">%</th>
+            <th style="text-align:right; color:#64748b; display:${dashboardHideGoals ? 'none' : 'table-cell'};">Meta</th>
+            <th style="text-align:center; display:${dashboardHideGoals ? 'none' : 'table-cell'};">%</th>
           </tr></thead>`
         : `<thead><tr><th>Mes</th><th style="text-align:center;"># Alumnos</th><th style="text-align:right;">Ingresos</th></tr></thead>`;
     
-    const tableRows = ORDERED_MONTH_KEYS.map(monthKey => {
+    const monthsToDisplay = dashboardSelectedMonth === 'all' 
+        ? ORDERED_MONTH_KEYS 
+        : [dashboardSelectedMonth];
+
+    const tableRows = monthsToDisplay.map(monthKey => {
         const monthData = displayData[monthKey];
         if (isGeneral) {
             const meta = METAS_MENSUALES[monthKey] || { students: 0, income: 0 };
@@ -2122,12 +2322,18 @@ function renderReportCard(title, data, companyKey = null) {
                 <tr>
                     <td>${MESES[monthKey]}</td>
                     <td style="text-align:center;">${monthData.students}</td>
-                    <td style="text-align:center; color:#64748b; font-size:0.75rem;">${meta.students}</td>
-                    <td style="text-align:center; font-weight:bold; color:${pAlumnos >= 1 ? '#10b981' : '#f59e0b'}">${percentFormatter.format(pAlumnos)}</td>
+                    <td style="text-align:center; color:#64748b; font-size:0.75rem; display:${dashboardHideGoals ? 'none' : 'table-cell'};">${meta.students}</td>
+                    <td style="text-align:center; font-weight:bold; color:${pAlumnos >= 1 ? '#10b981' : '#f59e0b'}; display:${dashboardHideGoals ? 'none' : 'table-cell'};">${percentFormatter.format(pAlumnos)}</td>
                     <td style="text-align:center; display:${dashboardShowHours ? 'table-cell' : 'none'};">${monthData.hours.toLocaleString()}</td>
+                    <td style="text-align:center; display:${dashboardShowNRC ? 'table-cell' : 'none'};">${monthData.nrcCount}</td>
+                    <td style="text-align:center; display:${dashboardShowPatrocinio ? 'table-cell' : 'none'};">${monthData.patrocinio}</td>
+                    <td style="text-align:center; display:${dashboardShowBeca ? 'table-cell' : 'none'};">${monthData.beca}</td>
+                    <td style="text-align:center; display:${dashboardShowPago ? 'table-cell' : 'none'};">${monthData.pago}</td>
+                    <td style="text-align:right; display:${dashboardShowIngresoPatrocinio ? 'table-cell' : 'none'};">${currencyFormatter.format(monthData.ingresoPatrocinio)}</td>
+                    <td style="text-align:right; display:${dashboardShowIngresoPago ? 'table-cell' : 'none'};">${currencyFormatter.format(monthData.ingresoPago)}</td>
                     <td style="text-align:right;">${currencyFormatter.format(monthData.income)}</td>
-                    <td style="text-align:right; color:#64748b; font-size:0.75rem;">${currencyFormatter.format(meta.income)}</td>
-                    <td style="text-align:center; font-weight:bold; color:${pIngresos >= 1 ? '#10b981' : '#f59e0b'}">${percentFormatter.format(pIngresos)}</td>
+                    <td style="text-align:right; color:#64748b; font-size:0.75rem; display:${dashboardHideGoals ? 'none' : 'table-cell'};">${currencyFormatter.format(meta.income)}</td>
+                    <td style="text-align:center; font-weight:bold; color:${pIngresos >= 1 ? '#10b981' : '#f59e0b'}; display:${dashboardHideGoals ? 'none' : 'table-cell'};">${percentFormatter.format(pIngresos)}</td>
                 </tr>
             `;
         } else {
@@ -2151,12 +2357,18 @@ function renderReportCard(title, data, companyKey = null) {
         footerHTML = `<tfoot><tr>
             <td><strong>Total</strong></td>
             <td style="text-align:center;"><strong>${displayData.total.students}</strong></td>
-            <td style="text-align:center;"><strong>${totalMetaStudents}</strong></td>
-            <td style="text-align:center;"><strong>${percentFormatter.format(totalPAlumnos)}</strong></td>
+            <td style="text-align:center; display:${dashboardHideGoals ? 'none' : 'table-cell'};"><strong>${totalMetaStudents}</strong></td>
+            <td style="text-align:center; display:${dashboardHideGoals ? 'none' : 'table-cell'};"><strong>${percentFormatter.format(totalPAlumnos)}</strong></td>
             <td style="text-align:center; display:${dashboardShowHours ? 'table-cell' : 'none'};"><strong>${displayData.total.hours.toLocaleString()}</strong></td>
+            <td style="text-align:center; display:${dashboardShowNRC ? 'table-cell' : 'none'};"><strong>${displayData.total.nrcCount}</strong></td>
+            <td style="text-align:center; display:${dashboardShowPatrocinio ? 'table-cell' : 'none'};"><strong>${displayData.total.patrocinio}</strong></td>
+            <td style="text-align:center; display:${dashboardShowBeca ? 'table-cell' : 'none'};"><strong>${displayData.total.beca}</strong></td>
+            <td style="text-align:center; display:${dashboardShowPago ? 'table-cell' : 'none'};"><strong>${displayData.total.pago}</strong></td>
+            <td style="text-align:right; display:${dashboardShowIngresoPatrocinio ? 'table-cell' : 'none'};"><strong>${currencyFormatter.format(displayData.total.ingresoPatrocinio)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowIngresoPago ? 'table-cell' : 'none'};"><strong>${currencyFormatter.format(displayData.total.ingresoPago)}</strong></td>
             <td style="text-align:right;"><strong>${currencyFormatter.format(displayData.total.income)}</strong></td>
-            <td style="text-align:right;"><strong>${currencyFormatter.format(totalMetaIncome)}</strong></td>
-            <td style="text-align:center;"><strong>${percentFormatter.format(totalPIngresos)}</strong></td>
+            <td style="text-align:right; display:${dashboardHideGoals ? 'none' : 'table-cell'};"><strong>${currencyFormatter.format(totalMetaIncome)}</strong></td>
+            <td style="text-align:center; display:${dashboardHideGoals ? 'none' : 'table-cell'};"><strong>${percentFormatter.format(totalPIngresos)}</strong></td>
         </tr></tfoot>`;
     } else {
         footerHTML = `<tfoot><tr><td><strong>Total</strong></td><td style="text-align:center;">${totalStudentsDisplay}</td><td style="text-align:right;"><strong>${currencyFormatter.format(displayData.total.income)}</strong></td></tr></tfoot>`;
@@ -2169,6 +2381,146 @@ function renderReportCard(title, data, companyKey = null) {
             <table class="report-table">
                 ${tableHeader}
                 <tbody>${tableRows}</tbody>
+                ${footerHTML}
+            </table>
+        </div>
+    `;
+}
+
+function renderDetailedNRCTable(docs) {
+    const currencyFormatter = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' });
+    
+    let totalPartSum = 0;
+    let becaSum = 0;
+    let pagoSum = 0;
+    let ingresoSum = 0;
+    let ingresoPagoSum = 0;
+    let horasTransfSum = 0;
+    let patrocinioSum = 0;
+
+    // Ordenar por fecha de inicio ascendente (de la más próxima a la más lejana)
+    const sortedDocs = [...docs].sort((a, b) => (a['Fecha de inicio'] || "").localeCompare(b['Fecha de inicio'] || ""));
+
+    const rows = sortedDocs.map(d => {
+        const nrc = d.NRC || '--';
+        const nombre = d['MODULO-CURSO'] || d['PROGRAMA'] || '--';
+        const inicio = d['Fecha de inicio'] || '--';
+        const duracion = parseInt(d['Duracion'] || d['Duración'] || 0);
+        const modalidad = d['MODALIDAD MÓDULO'] || d['MODALIDAD PROGRAMA'] || '--';
+        const costo = parseFloat(d['Precio Sinfo'] || 0);
+        const totalPart = parseInt(d['#Participantes Real Total'] || 0);
+        const beca = parseInt(d['Part_Beca'] || 0);
+        const pago = (parseInt(d['Part_Pago_Programa']) || 0) + (parseInt(d['Part_Pago_Curso']) || 0);
+        const patrocinio = totalPart - beca - pago;
+        const ingresoPatrocinio = patrocinio * costo;
+        const ingresoPago = pago * costo;
+        const horasTransf = totalPart * duracion;
+
+        let effTotalPart = totalPart;
+        let effBeca = beca;
+        let effPago = pago;
+        let effPatrocinio = patrocinio;
+        let effIngresoPatrocinio = ingresoPatrocinio;
+        let effIngresoPago = ingresoPago;
+        let effHorasTransf = horasTransf;
+
+        if (dashboardGeneralMode === 'adjusted') {
+            const state = dashboardCardState[d.EMPRESA || "Sin Empresa"];
+            if (state) {
+                if (state.noSumStudents || state.noSumNRC) {
+                    effTotalPart = 0;
+                    effBeca = 0;
+                    effPago = 0;
+                    effPatrocinio = 0;
+                    effHorasTransf = 0;
+                }
+                if (state.incomeDeduction > 0) {
+                    const factor = (100 - state.incomeDeduction) / 100;
+                    effIngresoPatrocinio *= factor;
+                    effIngresoPago *= factor;
+                }
+            }
+        }
+
+        totalPartSum += effTotalPart;
+        becaSum += effBeca;
+        pagoSum += effPago;
+        ingresoSum += effIngresoPatrocinio;
+        ingresoPagoSum += effIngresoPago;
+        horasTransfSum += effHorasTransf;
+        patrocinioSum += effPatrocinio;
+
+        return `
+            <tr>
+                <td>${nrc}</td>
+                <td>${nombre}</td>
+                <td>${inicio}</td>
+                <td style="text-align:center;">${duracion}</td>
+                <td>${modalidad}</td>
+                <td style="text-align:right;">${currencyFormatter.format(costo)}</td>
+                <td style="text-align:center;">${effTotalPart}</td>
+                <td style="text-align:center;">${effBeca}</td>
+                <td style="text-align:center;">${effPago}</td>
+                <td style="text-align:center;">${effPatrocinio}</td>
+                <td style="text-align:right;">${currencyFormatter.format(effIngresoPatrocinio)}</td>
+                <td style="text-align:center;">${effHorasTransf.toLocaleString()}</td>
+            </tr>
+        `;
+    }).join('');
+
+    // Actualizar campos ocultos con los totales calculados de la grilla detallada
+    const hPatrocinio = document.getElementById('hiddenTotalPatrocinio');
+    const hBeca = document.getElementById('hiddenTotalBeca');
+    const hPago = document.getElementById('hiddenTotalPago');
+    const hIngPatrocinio = document.getElementById('hiddenTotalIngresoPatrocinio');
+    const hIngPago = document.getElementById('hiddenTotalIngresoPago');
+    
+    if (hPatrocinio) hPatrocinio.value = patrocinioSum;
+    if (hBeca) hBeca.value = becaSum;
+    if (hPago) hPago.value = pagoSum;
+    if (hIngPatrocinio) hIngPatrocinio.value = ingresoSum;
+    if (hIngPago) hIngPago.value = ingresoPagoSum;
+
+    const footerHTML = docs.length > 0 ? `
+        <tfoot>
+            <tr style="font-weight: bold; background: #f1f5f9;">
+                <td colspan="6" style="text-align:right;">TOTALES:</td>
+                <td style="text-align:center;">${totalPartSum}</td>
+                <td style="text-align:center;">${becaSum}</td>
+                <td style="text-align:center;">${pagoSum}</td>
+                <td style="text-align:center;">${patrocinioSum}</td>
+                <td style="text-align:right;">${currencyFormatter.format(ingresoSum)}</td>
+                <td style="text-align:center;">${horasTransfSum.toLocaleString()}</td>
+            </tr>
+        </tfoot>
+    ` : '';
+
+    return `
+        <div class="report-card" id="detailedNRCTableContainer" style="grid-column: 1 / -1; overflow-x: auto; background: white;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">
+                <h3 style="margin:0; border:none;">Detalle de NRCs Ejecutadas</h3>
+                <button onclick="downloadNRCTableImage()" class="btn-primary btn-capture" style="font-size:0.75rem; padding:5px 12px; background:#6366f1;">📸 Descargar Captura</button>
+            </div>
+            <table class="report-table" style="min-width: 1100px;">
+                <thead>
+                    <tr>
+                        <th>NRC</th>
+                        <th>Módulo / Curso</th>
+                        <th>Inicio</th>
+                        <th style="text-align:center;">Dur.</th>
+                        <th>Modalidad</th>
+                        <th style="text-align:right;">Costo</th>
+                        <th style="text-align:center;">Total Part.</th>
+                        <th style="text-align:center;">Beca</th>
+                        <th style="text-align:center;">Pago</th>
+                        <th style="text-align:center;">Patrocinio</th>
+                        <th style="text-align:right;">Ingreso</th>
+                        <th style="text-align:center;">Hrs Transf.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows || '<tr><td colspan="12" style="text-align:center;">No hay datos para los filtros seleccionados</td></tr>'}
+                </tbody>
                 ${footerHTML}
             </table>
         </div>

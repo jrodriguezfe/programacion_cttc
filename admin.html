@@ -122,6 +122,12 @@
                 <div class="section-content" style="display: none; max-height: 0px;">
                     <div id="dashboardControls" style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;"></div>
                     <div id="dashboardContainer" class="dashboard-grid"></div>
+                    <input type="hidden" id="hiddenTotalNRC" value="0">
+                    <input type="hidden" id="hiddenTotalPatrocinio" value="0">
+                    <input type="hidden" id="hiddenTotalBeca" value="0">
+                    <input type="hidden" id="hiddenTotalPago" value="0">
+                    <input type="hidden" id="hiddenTotalIngresoPatrocinio" value="0">
+                    <input type="hidden" id="hiddenTotalIngresoPago" value="0">
                 </div>
             </section>
         </main>
@@ -129,6 +135,7 @@
 
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <script>
         // Función para toggle de secciones collapsibles
