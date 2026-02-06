@@ -3263,32 +3263,79 @@ window.cloneRecord = async (id, nombrePrograma = null) => {
 
 // Selección de elementos
 const inputNRC = document.getElementById('filterNRC');
+const inputNombre = document.getElementById('filterNombre');
 const tablaBody = document.getElementById('adminTableBody');
 
 // Función principal de filtrado
 function filtrarTabla() {
     const valNRC = inputNRC ? inputNRC.value.toLowerCase() : "";
+    const valNombre = inputNombre ? inputNombre.value.toLowerCase() : "";
+    const estaFiltrando = valNRC !== "" || valNombre !== "";
 
-    // Obtenemos todas las filas del cuerpo de la tabla
-    const filas = tablaBody.getElementsByTagName('tr');
+    const filas = Array.from(tablaBody.querySelectorAll('tr'));
 
-    for (let i = 0; i < filas.length; i++) {
-        // Asumiendo el orden de tus celdas: 0=NRC, 1=Nombre/Programa
-        const textoNRC = filas[i].getElementsByTagName('td')[0]?.textContent.toLowerCase() || "";
-
-        // Verificamos si la fila cumple con TODOS los filtros activos
-        const coincideNRC = textoNRC.includes(valNRC);
-
-        if (coincideNRC) {
-            filas[i].style.display = ""; // Mostrar
-        } else {
-            filas[i].style.display = "none"; // Ocultar
-        }
+    if (!estaFiltrando) {
+        // Si no hay filtros, restauramos el estado original: master visible, hijos ocultos
+        filas.forEach(f => {
+            f.style.display = "";
+            if (f.classList.contains('child-row-style')) {
+                f.classList.add('hidden-row');
+            }
+            const btn = f.querySelector('.expand-btn');
+            if (btn) {
+                btn.textContent = '▸';
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        });
+        return;
     }
+
+    // Ocultar todo inicialmente para aplicar el filtro
+    filas.forEach(f => f.style.display = "none");
+
+    // Agrupar por programas para manejar la jerarquía
+    const masterRows = filas.filter(f => f.classList.contains('prog-master-row'));
+    
+    masterRows.forEach(master => {
+        const expandBtn = master.querySelector('.expand-btn');
+        const progId = expandBtn ? expandBtn.getAttribute('data-prog') : null;
+        const childRows = filas.filter(f => f.classList.contains(`prog-child-${progId}`));
+
+        // Verificamos si el master o alguno de sus hijos coincide con los filtros
+        const matchMaster = master.textContent.toLowerCase().includes(valNRC) && 
+                            master.textContent.toLowerCase().includes(valNombre);
+        
+        const algunHijoCoincide = childRows.some(h => 
+            h.textContent.toLowerCase().includes(valNRC) && 
+            h.textContent.toLowerCase().includes(valNombre)
+        );
+
+        if (matchMaster || algunHijoCoincide) {
+            master.style.display = "";
+            // Si coincide el programa, mostramos TODOS sus módulos y expandimos visualmente
+            childRows.forEach(h => {
+                h.style.display = "";
+                h.classList.remove('hidden-row');
+            });
+            if (expandBtn) {
+                expandBtn.textContent = '▾';
+                expandBtn.setAttribute('aria-expanded', 'true');
+            }
+        }
+    });
+
+    // Cursos independientes (los que no son ni master ni hijos de programa)
+    filas.filter(f => !f.classList.contains('prog-master-row') && !f.classList.contains('child-row-style')).forEach(curso => {
+        if (curso.textContent.toLowerCase().includes(valNRC) && 
+            curso.textContent.toLowerCase().includes(valNombre)) {
+            curso.style.display = "";
+        }
+    });
 }
 
 // Escuchadores de eventos para tiempo real
 if (inputNRC) inputNRC.addEventListener('input', filtrarTabla);
+if (inputNombre) inputNombre.addEventListener('input', filtrarTabla);
 
 document.getElementById('btnFinalizar').onclick = () => location.reload();
 
