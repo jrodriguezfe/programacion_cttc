@@ -1873,12 +1873,10 @@ function renderDashboard(docs) {
         `;
     }
 
-    const COMPANIES_OF_INTEREST = ["CTTC", "ADMINISTRADORES INDUSTRIALES", "CAMTEX"];
-    
     const reports = {
         general: createMonthlyStructure()
     };
-    COMPANIES_OF_INTEREST.forEach(c => {
+    allCompanies.forEach(c => {
         reports[c] = createMonthlyStructure();
     });
 
@@ -1923,7 +1921,7 @@ function renderDashboard(docs) {
 
         if (dashboardGeneralMode === 'adjusted') {
             // Solo incluir empresas clave si están seleccionadas
-            if (COMPANIES_OF_INTEREST.includes(company) && dashboardSelectedCompanies.includes(company)) {
+            if (allCompanies.includes(company) && dashboardSelectedCompanies.includes(company)) {
                 includeInGeneral = true;
                 const state = dashboardCardState[company] || { noSumStudents: false, noSumNRC: false, incomeDeduction: 0 };
                 
@@ -1974,7 +1972,7 @@ function renderDashboard(docs) {
         }
 
         // --- ACUMULACIÓN POR EMPRESA (SIEMPRE RAW PARA LA TARJETA INDIVIDUAL) ---
-        if (COMPANIES_OF_INTEREST.includes(company)) {
+        if (allCompanies.includes(company)) {
             const rep = reports[company][month];
             rep.students += students;
             rep.income += totalIncome;
@@ -2001,7 +1999,7 @@ function renderDashboard(docs) {
 
         // En modo ajustado, la tabla solo debe mostrar las empresas de interés
         if (dashboardGeneralMode === 'adjusted') {
-            return COMPANIES_OF_INTEREST.includes(company);
+            return allCompanies.includes(company);
         }
         return true;
     });
@@ -2018,7 +2016,7 @@ function renderDashboard(docs) {
         <div class="report-card" style="height: 350px;"><canvas id="chartIncome"></canvas></div>
     `;
 
-    COMPANIES_OF_INTEREST.forEach(c => {
+    allCompanies.forEach(c => {
         dashboardHTML += renderReportCard(`Empresa: ${c}`, reports[c], c);
     });
 
