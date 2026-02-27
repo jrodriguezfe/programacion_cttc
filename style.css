@@ -659,3 +659,20 @@ details[open] summary span:last-child {
     background: #f0f9ff;
     border-bottom: none;
 }
+
+.btn-nrc-info {
+    margin-top: 5px;
+    padding: 4px 8px;
+    background: #0054a6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-nrc-info:hover {
+    background: #003d7a;
+}

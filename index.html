@@ -142,6 +142,21 @@
                 <button id="btnCloseModal" style="width: 100%; margin-top: 15px; background: none; border: none; color: #64748b; text-decoration: underline; cursor: pointer; font-size: 12px;">Cerrar Vista</button>
             </div>
         </div>
+
+        <!-- Modal para Detalles Técnicos NRC (Seleccionable y Copiable) -->
+        <div id="nrcDetailsModal" class="modal hidden">
+            <div class="modal-content shadow" style="max-width: 500px; padding: 2rem; border-radius: 15px; background: #fff;">
+                <header style="text-align: center; margin-bottom: 1.5rem;">
+                    <h3 style="color: #0054a6; margin: 0; font-size: 1.2rem;">Detalles Técnicos NRC</h3>
+                    <p style="color: #64748b; font-size: 0.8rem; margin-top: 5px;">Puedes seleccionar y copiar partes específicas del texto.</p>
+                </header>
+                <textarea id="nrcDetailsText" readonly style="width: 100%; height: 220px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; resize: none; background: #f8fafc; color: #334155; margin-bottom: 1.5rem; line-height: 1.6; outline: none;"></textarea>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btnCopyNrcModal" class="btn-save" style="flex: 1;">Copiar Todo</button>
+                    <button id="btnCloseNrcModal" class="btn-secondary" style="flex: 1; background: #64748b; color: white; border: none;">Cerrar</button>
+                </div>
+            </div>
+        </div>
     </div>
     <script type="module" src="app.js"></script>
 </body>

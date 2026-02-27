@@ -16,6 +16,23 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const colRef = collection(db, "programaciones");
 
+const DOCENTE_IDS = {
+    "ANDRES CCOCA": "000310149",
+    "CARMELON GONZALES": "1140234",
+    "JONATAN BEGAZO": "000872470",
+    "JORGE CAYCHO": "001489131",
+    "LUIS QUELOPANA": "000275632",
+    "MARCO POLO": "419010",
+    "MARIA PEREZ": "000508547",
+    "MARTA LAURA": "001108028",
+    "MARTHA MAYTA": "001470313",
+    "NANCY PACHECO": "000908855",
+    "RICARDO MORENO": "001404715",
+    "ROBERT CALDERON": "000070025",
+    "VICTOR HUAMANÍ": "000697786",
+    "VICTOR GASTAÑETA": "001514007"
+};
+
 // Configuración de campos
 const CAMPOS_MODAL = ["Part_Programa", "Part_Curso", "Part_Beca", "Part_Pago_Programa", "Part_Pago_Curso"];
 
@@ -200,13 +217,44 @@ function createDataRow(d, customClass = '') {
         <td>${d["Docente"] || '--'}</td>
         <td>${d.Duracion || d.Duración || '--'} hrs</td>
         <td style="font-size:10px;">${d.Horario || '--'}</td>
-        <td>${d.NRC || '--'}</td>
+        <td>
+            ${d.NRC || '--'}
+            ${userLogged ? `<br><button class="btn-nrc-info" onclick="event.stopPropagation(); window.showNrcDetails('${d.id}')">DATOS NRC</button>` : ''}
+        </td>
         <td style="text-align:center;">${d["#Participantes Objetivo"] || 0}</td>
         <td style="text-align:center;">${d["#Participantes Real Total"] || 0}</td>
     `;
     tr.onclick = () => openQuickEdit(d.id, d);
     return tr;
 }
+
+window.showNrcDetails = (id) => {
+    const d = lastSnapshotData.find(item => item.id === id);
+    if (!d) return;
+    
+    const docenteRaw = d.Docente || '';
+    const ids = docenteRaw.split(',')
+        .map(name => name.trim())
+        .map(name => DOCENTE_IDS[name] || 'N/A')
+        .join(', ');
+
+    const msg = `📋 DATOS TÉCNICOS NRC\n\n` +
+                `• NRC SEMILLA: ${d["NRC Semilla"] || '---'}\n` +
+                `• PRECIO SINFO: S/ ${d["Precio Sinfo"] || '0'}\n` +
+                `• HORARIO: ${d.Horario || '---'}\n` +
+                `• FECHA INICIO: ${d["Fecha de inicio"] || '---'}\n` +
+                `• FECHA FIN: ${d["Fecha de fin"] || '---'}\n` +
+                `• DOCENTE: ${docenteRaw || '---'}\n` +
+                `• ID DOCENTE: ${ids}\n` +
+                `• ATRIBUTO: ${d["Con atributo?_SSADETL"] || 'NO'}`;
+
+    const modal = document.getElementById('nrcDetailsModal');
+    const textArea = document.getElementById('nrcDetailsText');
+    if (modal && textArea) {
+        textArea.value = msg;
+        modal.classList.remove('hidden');
+    }
+};
 
 // --- GESTIÓN DE FILTROS ---
 function populateFilterOptions(rawData) {
@@ -381,6 +429,18 @@ document.getElementById('docenteFilter').onchange = (e) => { currentDocente = e.
 document.getElementById('programaFilter').onchange = (e) => { currentPrograma = e.target.value; renderFromData(lastSnapshotData); };
 document.getElementById('moduloFilter').oninput = (e) => { currentModuloQuery = e.target.value; renderFromData(lastSnapshotData); };
 document.getElementById('hideStartedFilter').onchange = (e) => { hideStartedCourses = e.target.checked; renderFromData(lastSnapshotData); };
+
+// Eventos para el modal de detalles NRC
+document.getElementById('btnCloseNrcModal').onclick = () => {
+    document.getElementById('nrcDetailsModal').classList.add('hidden');
+};
+
+document.getElementById('btnCopyNrcModal').onclick = () => {
+    const textArea = document.getElementById('nrcDetailsText');
+    navigator.clipboard.writeText(textArea.value).then(() => {
+        alert("✅ ¡Información completa copiada al portapapeles!");
+    });
+};
 
 // Al final de app.js, junto a los otros eventos
 document.getElementById('empresaFilter').onchange = (e) => { 
