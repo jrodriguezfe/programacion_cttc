@@ -342,6 +342,10 @@ function openQuickEdit(id, data) {
     const modal = document.getElementById('quickEditModal');
     document.getElementById('courseNameTitle').textContent = data["MODULO-CURSO"] || data["PROGRAMA"] || "Sin nombre";
 
+    // Cargar NRC
+    const nrcInput = document.getElementById('q_NRC');
+    if (nrcInput) nrcInput.value = data.NRC || "";
+
     let sumaActual = 0;
     CAMPOS_MODAL.forEach(campo => {
         const idInput = `q_${campo.replace(/ /g, "_")}`;
@@ -387,6 +391,10 @@ if (btnSaveQuick) {
 
         const updates = {};
         let totalReal = 0;
+
+        // Capturar NRC
+        const nrcInput = document.getElementById('q_NRC');
+        if (nrcInput) updates["NRC"] = nrcInput.value;
 
         // Itera sobre cada campo para capturar el valor numérico
         CAMPOS_MODAL.forEach(campo => {
