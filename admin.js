@@ -2587,6 +2587,15 @@ function loadAdminTable() {
         // Renderizar el dashboard con los datos actualizados
         renderDashboard(docs);
 
+        // Poblar el selector de docentes para cruces de horario
+
+        const conflictSel = document.getElementById('conflictDocenteSelector');
+
+        if (conflictSel && conflictSel.options.length <= 1) {
+            conflictSel.innerHTML = '<option value="">Seleccione un docente...</option>' + 
+            DOCENTES.map(d => `<option value="${d}">${d}</option>`).join('');
+            conflictSel.onchange = (e) => checkTeacherConflicts(e.target.value);
+        }
 
 
         // Separar cursos y módulos
@@ -3338,3 +3347,144 @@ if (inputNombre) inputNombre.addEventListener('input', filtrarTabla);
 document.getElementById('btnFinalizar').onclick = () => location.reload();
 
 document.getElementById('btnLogout').onclick = () => signOut(auth);
+
+// --- GESTIÓN DE CRUCES DE HORARIO POR DOCENTE ---
+function checkTeacherConflicts(docenteName) {
+    const container = document.getElementById('conflictResultsContainer');
+    if (!docenteName) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const allDocs = window.lastDashboardDocs || [];
+    const teacherDocs = allDocs.filter(d => (d.Docente || "").includes(docenteName));
+
+    if (teacherDocs.length === 0) {
+        container.innerHTML = '<p style="padding:20px; color:#64748b;">No hay horarios asignados para este docente.</p>';
+        return;
+    }
+
+    // 1. ORDENAMIENTO INICIAL
+    teacherDocs.sort((a, b) => (a["Fecha de inicio"] || "").localeCompare(b["Fecha de inicio"] || ""));
+
+    // 2. LÓGICA DE AGRUPACIÓN PARA EL RESUMEN (El fragmento que analizamos)
+    const scheduleGroups = {};
+    teacherDocs.forEach(doc => {
+        const sched = doc.Horario || "Sin Horario";
+        if (!scheduleGroups[sched]) {
+            scheduleGroups[sched] = {
+                horario: sched,
+                inicio: doc["Fecha de inicio"] || "---",
+                fin: doc["Fecha de fin"] || "---",
+                cursos: new Set()
+            };
+        }
+        // Actualizar fechas extremas del grupo
+        if (doc["Fecha de inicio"] && (scheduleGroups[sched].inicio === "---" || doc["Fecha de inicio"] < scheduleGroups[sched].inicio)) 
+            scheduleGroups[sched].inicio = doc["Fecha de inicio"];
+        if (doc["Fecha de fin"] && (scheduleGroups[sched].fin === "---" || doc["Fecha de fin"] > scheduleGroups[sched].fin)) 
+            scheduleGroups[sched].fin = doc["Fecha de fin"];
+        
+        scheduleGroups[sched].cursos.add(doc["MODULO-CURSO"] || doc["PROGRAMA"]);
+    });
+
+    const groupedSchedules = Object.values(scheduleGroups).sort((a, b) => a.inicio.localeCompare(b.inicio));
+
+    // 3. GENERACIÓN DEL HTML (Resumen + Tabla)
+    let html = `
+        <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; border: 1px solid #bae6fd; margin-bottom: 20px;">
+            <h3 style="font-size: 0.95rem; color: #0369a1; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.2rem;">📋</span> Resumen de Disponibilidad: ${docenteName}
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 12px;">
+                ${groupedSchedules.map(g => `
+                    <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 0.85rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        <div style="color: #0ea5e9; font-weight: 700; margin-bottom: 6px; font-size: 0.9rem;">⏰ ${g.horario}</div>
+                        <div style="color: #1e293b; font-weight: 600; margin-bottom: 4px;">📅 Periodo: ${g.inicio} al ${g.fin}</div>
+                        <div style="color: #64748b; font-size: 0.75rem; line-height: 1.4;">
+                            <strong>Cursos ocupando este horario:</strong><br>
+                            ${Array.from(g.cursos).join(', ')}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+
+        <h3 style="font-size: 0.95rem; color: #1e293b; margin-bottom: 10px;">Análisis Detallado de Conflictos</h3>
+        <div class="table-container" style="margin-top:10px; overflow-x:auto;">
+            <table class="report-table" style="min-width: 800px;">
+                <thead>
+                    <tr>
+                        <th>Programa / Módulo</th>
+                        <th>Periodo</th>
+                        <th>Horario Detallado</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    // 4. BUCLE DE DETECCIÓN DE CONFLICTOS (Tu lógica original)
+    for (let i = 0; i < teacherDocs.length; i++) {
+        const docA = teacherDocs[i];
+        const scheduleA = parseHorario(docA.Horario);
+        let hasConflict = false;
+        let conflictDetails = [];
+
+        for (let j = 0; j < teacherDocs.length; j++) {
+            if (i === j) continue;
+            const docB = teacherDocs[j];
+            
+            if (datesOverlap(docA["Fecha de inicio"], docA["Fecha de fin"], docB["Fecha de inicio"], docB["Fecha de fin"])) {
+                const scheduleB = parseHorario(docB.Horario);
+                const overlap = checkScheduleOverlap(scheduleA, scheduleB);
+                if (overlap) {
+                    hasConflict = true;
+                    conflictDetails.push(`Cruce con: ${docB["MODULO-CURSO"] || docB["PROGRAMA"]} (${overlap})`);
+                }
+            }
+        }
+
+        html += `
+            <tr style="${hasConflict ? 'background:#fff1f2;' : ''}">
+                <td>
+                    <strong>${docA["MODULO-CURSO"] || docA["PROGRAMA"]}</strong><br>
+                    <small style="color:#64748b;">NRC: ${docA.NRC || '--'}</small>
+                </td>
+                <td>${docA["Fecha de inicio"]} al ${docA["Fecha de fin"]}</td>
+                <td style="font-size:0.8rem;">${docA.Horario || '--'}</td>
+                <td>
+                    ${hasConflict 
+                        ? `<span style="color:#e11d48; font-weight:bold;">⚠️ CRUCE DETECTADO</span><br><small style="color:#e11d48;">${conflictDetails.join('<br>')}</small>` 
+                        : '<span style="color:#10b981; font-weight:bold;">✅ OK</span>'}
+                </td>
+            </tr>
+        `;
+    }
+
+    html += `</tbody></table></div>`;
+    container.innerHTML = html;
+}
+
+
+function parseHorario(str) {
+    if (!str) return [];
+    return str.split(' | ').map(b => {
+        const match = b.match(/BLOQUE: (.*?): (.*?) \((.*?) a (.*?)\)/);
+        return match ? { type: match[1], days: match[2].split('-').map(d => d.trim()), start: match[3], end: match[4] } : null;
+    }).filter(Boolean);
+}
+
+function datesOverlap(sA, eA, sB, eB) { return (sA && eA && sB && eB) ? (sA <= eB && eA >= sB) : false; }
+
+function checkScheduleOverlap(schedA, schedB) {
+    for (const bA of schedA) {
+        for (const bB of schedB) {
+            const commonDays = bA.days.filter(d => bB.days.includes(d));
+            if (commonDays.length > 0 && bA.start < bB.end && bB.start < bA.end) {
+                return `Días: ${commonDays.join(', ')} (${bA.start}-${bA.end} vs ${bB.start}-${bB.end})`;
+            }
+        }
+    }
+    return null;
+}

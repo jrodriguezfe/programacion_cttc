@@ -131,6 +131,24 @@
                     <input type="hidden" id="hiddenTotalIngresoPago" value="0">
                 </div>
             </section>
+
+            <!-- SECCIÓN 5: CRUCE DE HORARIOS POR DOCENTE -->
+            <section id="scheduleConflictSection" class="form-container shadow" style="margin-top: 30px;">
+                <header class="section-header-collapsible" onclick="toggleSection(this)">
+                    <div>
+                        <h2>Cruce de Horarios por Docente</h2>
+                        <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #64748b; font-weight: normal;">Verifique la disponibilidad y posibles cruces de horario de los docentes.</p>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </header>
+                <div class="section-content" style="display: none; max-height: 0px;">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #64748b; margin-bottom: 6px;">SELECCIONAR DOCENTE:</label>
+                        <select id="conflictDocenteSelector" class="custom-select"></select>
+                    </div>
+                    <div id="conflictResultsContainer"></div>
+                </div>
+            </section>
         </main>
     </div>
 
