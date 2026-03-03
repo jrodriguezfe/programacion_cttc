@@ -2178,6 +2178,59 @@ window.downloadNRCTableImage = () => {
     });
 };
 
+window.downloadNRCTableExcel = () => {
+    const docs = window.lastDetailedDocs;
+    if (!docs || docs.length === 0) {
+        alert("No hay datos para exportar.");
+        return;
+    }
+
+    const currencyFormatter = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' });
+
+    const data = docs.map(d => {
+        const totalPart = parseInt(d['#Participantes Real Total'] || 0);
+        const beca = parseInt(d['Part_Beca'] || 0);
+        const pago = (parseInt(d['Part_Pago_Programa']) || 0) + (parseInt(d['Part_Pago_Curso']) || 0);
+        const patrocinio = totalPart - beca - pago;
+        const costo = parseFloat(d['Precio Sinfo'] || 0);
+        const duracion = parseInt(d['Duracion'] || d['Duración'] || 0);
+
+        let effTotalPart = totalPart, effBeca = beca, effPago = pago, effPatrocinio = patrocinio, effIngreso = patrocinio * costo, effHoras = totalPart * duracion;
+
+        if (dashboardGeneralMode === 'adjusted') {
+            const state = dashboardCardState[d.EMPRESA || "Sin Empresa"];
+            if (state) {
+                if (state.noSumStudents || state.noSumNRC) {
+                    effTotalPart = 0; effBeca = 0; effPago = 0; effPatrocinio = 0; effHoras = 0;
+                }
+                if (state.incomeDeduction > 0) {
+                    effIngreso *= (100 - state.incomeDeduction) / 100;
+                }
+            }
+        }
+
+        return {
+            "NRC": d.NRC || '--',
+            "Módulo / Curso": d['MODULO-CURSO'] || d['PROGRAMA'] || '--',
+            "Inicio": d['Fecha de inicio'] || '--',
+            "Duración": duracion,
+            "Modalidad": d['MODALIDAD MÓDULO'] || d['MODALIDAD PROGRAMA'] || '--',
+            "Costo": costo,
+            "Total Part.": effTotalPart,
+            "Beca": effBeca,
+            "Pago": effPago,
+            "Patrocinio": effPatrocinio,
+            "Ingreso": effIngreso,
+            "Horas Transf.": effHoras
+        };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Detalle NRC");
+    XLSX.writeFile(wb, `Detalle_NRC_${dashboardSelectedYear}_Mes_${dashboardSelectedMonth}.xlsx`);
+};
+
 window.updateCardState = (companyKey, field, value) => {
     if (!dashboardCardState[companyKey]) dashboardCardState[companyKey] = { noSumStudents: false, noSumNRC: false, incomeDeduction: 0 };
     
@@ -2398,6 +2451,7 @@ function renderDetailedNRCTable(docs) {
 
     // Ordenar por fecha de inicio ascendente (de la más próxima a la más lejana)
     const sortedDocs = [...docs].sort((a, b) => (a['Fecha de inicio'] || "").localeCompare(b['Fecha de inicio'] || ""));
+    window.lastDetailedDocs = sortedDocs;
 
     const rows = sortedDocs.map(d => {
         const nrc = d.NRC || '--';
@@ -2497,7 +2551,10 @@ function renderDetailedNRCTable(docs) {
         <div class="report-card" id="detailedNRCTableContainer" style="grid-column: 1 / -1; overflow-x: auto; background: white;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">
                 <h3 style="margin:0; border:none;">Detalle de NRCs Ejecutadas</h3>
-                <button onclick="downloadNRCTableImage()" class="btn-primary btn-capture" style="font-size:0.75rem; padding:5px 12px; background:#6366f1;">📸 Descargar Captura</button>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="downloadNRCTableExcel()" class="btn-primary" style="font-size:0.75rem; padding:5px 12px; background:#10b981;">📊 Descargar Excel</button>
+                    <button onclick="downloadNRCTableImage()" class="btn-primary btn-capture" style="font-size:0.75rem; padding:5px 12px; background:#6366f1;">📸 Descargar Captura</button>
+                </div>
             </div>
             <table class="report-table" style="min-width: 1100px;">
                 <thead>
