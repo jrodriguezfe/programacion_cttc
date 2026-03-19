@@ -1767,6 +1767,7 @@ let dashboardShowPago = false; // Control de visibilidad de Pago
 let dashboardShowIngresoPatrocinio = false; // Control de visibilidad de Ingreso Patrocinio
 let dashboardShowIngresoPago = false; // Control de visibilidad de Ingreso Pago
 let dashboardHideGoals = false; // Control de visibilidad de Metas y %
+let dashboardShowAllNRCs = false; // Estado para mostrar todos los NRCs en la tabla detallada
 let dashboardSelectedYear = new Date().getFullYear().toString(); // Año seleccionado por defecto
 let dashboardSelectedMonth = 'all'; // Mes seleccionado por defecto
 
@@ -2007,14 +2008,16 @@ function renderDashboard(docs) {
     // Renderizar los reportes
     let dashboardHTML = renderReportCard(`Resumen General ${dashboardSelectedYear}`, reports.general);
     
+    // Agregar contenedores para los gráficos justo debajo del resumen general
+    dashboardHTML += `
+        <div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 2rem;">
+            <div class="report-card" style="height: 350px;"><canvas id="chartStudents"></canvas></div>
+            <div class="report-card" style="height: 350px;"><canvas id="chartIncome"></canvas></div>
+        </div>
+    `;
+
     // Tabla detallada de NRCs
     dashboardHTML += renderDetailedNRCTable(detailedDocs);
-
-    // Agregar contenedores para los gráficos debajo del resumen general
-    dashboardHTML += `
-        <div class="report-card" style="height: 350px;"><canvas id="chartStudents"></canvas></div>
-        <div class="report-card" style="height: 350px;"><canvas id="chartIncome"></canvas></div>
-    `;
 
     allCompanies.forEach(c => {
         dashboardHTML += renderReportCard(`Empresa: ${c}`, reports[c], c);
@@ -2152,6 +2155,11 @@ window.toggleDashboardIngresoPago = () => {
 
 window.toggleDashboardGoals = () => {
     dashboardHideGoals = !dashboardHideGoals;
+    renderDashboard(window.lastDashboardDocs);
+};
+
+window.toggleShowAllNRCs = () => {
+    dashboardShowAllNRCs = !dashboardShowAllNRCs;
     renderDashboard(window.lastDashboardDocs);
 };
 
@@ -2453,12 +2461,8 @@ function renderDetailedNRCTable(docs) {
     const sortedDocs = [...docs].sort((a, b) => (a['Fecha de inicio'] || "").localeCompare(b['Fecha de inicio'] || ""));
     window.lastDetailedDocs = sortedDocs;
 
-    const rows = sortedDocs.map(d => {
-        const nrc = d.NRC || '--';
-        const nombre = d['MODULO-CURSO'] || d['PROGRAMA'] || '--';
-        const inicio = d['Fecha de inicio'] || '--';
-        const duracion = parseInt(d['Duracion'] || d['Duración'] || 0);
-        const modalidad = d['MODALIDAD MÓDULO'] || d['MODALIDAD PROGRAMA'] || '--';
+    // --- CÁLCULO DE TOTALES SOBRE TODOS LOS DOCUMENTOS ---
+    sortedDocs.forEach(d => {
         const costo = parseFloat(d['Precio Sinfo'] || 0);
         const totalPart = parseInt(d['#Participantes Real Total'] || 0);
         const beca = parseInt(d['Part_Beca'] || 0);
@@ -2466,6 +2470,7 @@ function renderDetailedNRCTable(docs) {
         const patrocinio = totalPart - beca - pago;
         const ingresoPatrocinio = patrocinio * costo;
         const ingresoPago = pago * costo;
+        const duracion = parseInt(d['Duracion'] || d['Duración'] || 0);
         const horasTransf = totalPart * duracion;
 
         let effTotalPart = totalPart;
@@ -2480,11 +2485,7 @@ function renderDetailedNRCTable(docs) {
             const state = dashboardCardState[d.EMPRESA || "Sin Empresa"];
             if (state) {
                 if (state.noSumStudents || state.noSumNRC) {
-                    effTotalPart = 0;
-                    effBeca = 0;
-                    effPago = 0;
-                    effPatrocinio = 0;
-                    effHorasTransf = 0;
+                    effTotalPart = 0; effBeca = 0; effPago = 0; effPatrocinio = 0; effHorasTransf = 0;
                 }
                 if (state.incomeDeduction > 0) {
                     const factor = (100 - state.incomeDeduction) / 100;
@@ -2493,7 +2494,6 @@ function renderDetailedNRCTable(docs) {
                 }
             }
         }
-
         totalPartSum += effTotalPart;
         becaSum += effBeca;
         pagoSum += effPago;
@@ -2501,6 +2501,39 @@ function renderDetailedNRCTable(docs) {
         ingresoPagoSum += effIngresoPago;
         horasTransfSum += effHorasTransf;
         patrocinioSum += effPatrocinio;
+    });
+
+    // --- RENDERIZADO DE FILAS (VISIBLES) ---
+    const docsToShow = dashboardShowAllNRCs ? sortedDocs : sortedDocs.slice(0, 10);
+
+    const rows = docsToShow.map(d => {
+        const nrc = d.NRC || '--';
+        const nombre = d['MODULO-CURSO'] || d['PROGRAMA'] || '--';
+        const inicio = d['Fecha de inicio'] || '--';
+        const duracion = parseInt(d['Duracion'] || d['Duración'] || 0);
+        const modalidad = d['MODALIDAD MÓDULO'] || d['MODALIDAD PROGRAMA'] || '--';
+        const costo = parseFloat(d['Precio Sinfo'] || 0);
+        const totalPart = parseInt(d['#Participantes Real Total'] || 0);
+        const beca = parseInt(d['Part_Beca'] || 0);
+        const pago = (parseInt(d['Part_Pago_Programa']) || 0) + (parseInt(d['Part_Pago_Curso']) || 0);
+        const patrocinio = totalPart - beca - pago;
+        const ingresoPatrocinio = patrocinio * costo;
+        const horasTransf = totalPart * duracion;
+
+        // Aplicar ajustes para la fila individual
+        let effTotalPart = totalPart, effBeca = beca, effPago = pago, effPatrocinio = patrocinio, effIngresoPatrocinio = ingresoPatrocinio, effHorasTransf = horasTransf;
+        if (dashboardGeneralMode === 'adjusted') {
+            const state = dashboardCardState[d.EMPRESA || "Sin Empresa"];
+            if (state) {
+                if (state.noSumStudents || state.noSumNRC) {
+                    effTotalPart = 0; effBeca = 0; effPago = 0; effPatrocinio = 0; effHorasTransf = 0;
+                }
+                if (state.incomeDeduction > 0) {
+                    const factor = (100 - state.incomeDeduction) / 100;
+                    effIngresoPatrocinio *= factor;
+                }
+            }
+        }
 
         return `
             <tr>
@@ -2547,6 +2580,17 @@ function renderDetailedNRCTable(docs) {
         </tfoot>
     ` : '';
 
+    // --- BOTÓN VER MÁS ---
+    let seeMoreButtonHTML = '';
+    if (sortedDocs.length > 10) {
+        const buttonText = dashboardShowAllNRCs ? 'Ver Menos' : `Ver los ${sortedDocs.length - 10} restantes...`;
+        seeMoreButtonHTML = `
+            <div style="text-align: center; padding: 15px 0 5px 0;">
+                <button onclick="toggleShowAllNRCs()" class="btn-secondary" style="font-size:0.8rem; padding:8px 20px;">${buttonText}</button>
+            </div>
+        `;
+    }
+
     return `
         <div class="report-card" id="detailedNRCTableContainer" style="grid-column: 1 / -1; overflow-x: auto; background: white;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">
@@ -2578,6 +2622,7 @@ function renderDetailedNRCTable(docs) {
                 </tbody>
                 ${footerHTML}
             </table>
+            ${seeMoreButtonHTML}
         </div>
     `;
 }
