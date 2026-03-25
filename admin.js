@@ -1766,6 +1766,21 @@ let dashboardShowBeca = false; // Control de visibilidad de Beca
 let dashboardShowPago = false; // Control de visibilidad de Pago
 let dashboardShowIngresoPatrocinio = false; // Control de visibilidad de Ingreso Patrocinio
 let dashboardShowIngresoPago = false; // Control de visibilidad de Ingreso Pago
+let dashboardShowIng2021 = false; // Control de visibilidad ING PAG 2021
+let dashboardShowIng2022 = false; // Control de visibilidad ING PAG 2022
+let dashboardShowIng2023 = false; // Control de visibilidad ING PAG 2023
+let dashboardShowIng2024 = false; // Control de visibilidad ING PAG 2024
+let dashboardShowIng2025 = false; // Control de visibilidad ING PAG 2025
+let dashboardShowIngPatrocinio2021 = false; // Control de visibilidad ING PATROCINIO 2021
+let dashboardShowIngPatrocinio2022 = false; // Control de visibilidad ING PATROCINIO 2022
+let dashboardShowIngPatrocinio2023 = false; // Control de visibilidad ING PATROCINIO 2023
+let dashboardShowIngPatrocinio2024 = false; // Control de visibilidad ING PATROCINIO 2024
+let dashboardShowIngPatrocinio2025 = false; // Control de visibilidad ING PATROCINIO 2025
+let dashboardShowTotalHis2021 = false; // Control de visibilidad TOTAL HIS 2021
+let dashboardShowTotalHis2022 = false; // Control de visibilidad TOTAL HIS 2022
+let dashboardShowTotalHis2023 = false; // Control de visibilidad TOTAL HIS 2023
+let dashboardShowTotalHis2024 = false; // Control de visibilidad TOTAL HIS 2024
+let dashboardShowTotalHis2025 = false; // Control de visibilidad TOTAL HIS 2025
 let dashboardHideGoals = false; // Control de visibilidad de Metas y %
 let dashboardShowAllNRCs = false; // Estado para mostrar todos los NRCs en la tabla detallada
 let dashboardSelectedYear = new Date().getFullYear().toString(); // Año seleccionado por defecto
@@ -1794,6 +1809,22 @@ const METAS_MENSUALES = {
     "10": { students: 230, income: 133837 },
     "11": { students: 200, income: 133837 },
     "12": { students: 180, income: 60834 }
+};
+
+const HISTORICO_INGRESOS = {
+    "2021": { "01": 18700, "02": 16655, "03": 17280, "04": 14110, "05": 29150, "06": 16460, "07": 27210, "08": 20020, "09": 26420, "10": 23838, "11": 24020, "12": 15165 },
+    "2022": { "01": 17258, "02": 11045, "03": 29107, "04": 15747, "05": 38989, "06": 6000, "07": 20400, "08": 15971, "09": 24605, "10": 5000, "11": 115622, "12": 8100 },
+    "2023": { "01": 24278, "02": 29318, "03": 33900, "04": 38407, "05": 52371, "06": 25900, "07": 18071, "08": 20733, "09": 47860, "10": 17318, "11": 19960, "12": 8978 },
+    "2024": { "01": 14133, "02": 9661, "03": 3149, "04": 8600, "05": 17896, "06": 12878, "07": 15492, "08": 15468, "09": 13518, "10": 12250, "11": 29618, "12": 25318 },
+    "2025": { "01": 14063, "02": 9952, "03": 8712, "04": 4770, "05": 26886, "06": 14935, "07": 2601, "08": 22610, "09": 22560, "10": 42023, "11": 39325, "12": 35528 }
+};
+
+const HISTORICO_INGRESOS_PATROCINIO = {
+    "2021": { "01": 0, "02": 0, "03": 0, "04": 0, "05": 0, "06": 0, "07": 0, "08": 0, "09": 0, "10": 0, "11": 0, "12": 0 },
+    "2022": { "01": 0, "02": 0, "03": 0, "04": 0, "05": 0, "06": 0, "07": 0, "08": 0, "09": 0, "10": 0, "11": 0, "12": 0 },
+    "2023": { "01": 0, "02": 0, "03": 0, "04": 0, "05": 14820, "06": 16050, "07": 21900, "08": 23070, "09": 27900, "10": 18600, "11": 31440, "12": 11700 },
+    "2024": { "01": 30600, "02": 23070, "03": 22590, "04": 14760, "05": 20160, "06": 31290, "07": 39990, "08": 39270, "09": 54870, "10": 59130, "11": 67098, "12": 44520 },
+    "2025": { "01": 60660, "02": 60421, "03": 76014, "04": 103000, "05": 124522, "06": 96336, "07": 112051, "08": 91359, "09": 106142, "10": 119376, "11": 103923, "12": 46292 }
 };
 
 function createMonthlyStructure() {
@@ -2158,6 +2189,24 @@ window.toggleDashboardGoals = () => {
     renderDashboard(window.lastDashboardDocs);
 };
 
+window.toggleDashboardIng2021 = () => { dashboardShowIng2021 = !dashboardShowIng2021; renderDashboard(window.lastDashboardDocs); };
+window.toggleDashboardIng2022 = () => { dashboardShowIng2022 = !dashboardShowIng2022; renderDashboard(window.lastDashboardDocs); };
+window.toggleDashboardIng2023 = () => { dashboardShowIng2023 = !dashboardShowIng2023; renderDashboard(window.lastDashboardDocs); };
+window.toggleDashboardIng2024 = () => { dashboardShowIng2024 = !dashboardShowIng2024; renderDashboard(window.lastDashboardDocs); };
+window.toggleDashboardIng2025 = () => { dashboardShowIng2025 = !dashboardShowIng2025; renderDashboard(window.lastDashboardDocs); };
+
+window.toggleDashboardIngPatrocinio2021 = () => { dashboardShowIngPatrocinio2021 = !dashboardShowIngPatrocinio2021; renderDashboard(window.lastDashboardDocs); };
+window.toggleDashboardIngPatrocinio2022 = () => { dashboardShowIngPatrocinio2022 = !dashboardShowIngPatrocinio2022; renderDashboard(window.lastDashboardDocs); };
+window.toggleDashboardIngPatrocinio2023 = () => { dashboardShowIngPatrocinio2023 = !dashboardShowIngPatrocinio2023; renderDashboard(window.lastDashboardDocs); };
+window.toggleDashboardIngPatrocinio2024 = () => { dashboardShowIngPatrocinio2024 = !dashboardShowIngPatrocinio2024; renderDashboard(window.lastDashboardDocs); };
+window.toggleDashboardIngPatrocinio2025 = () => { dashboardShowIngPatrocinio2025 = !dashboardShowIngPatrocinio2025; renderDashboard(window.lastDashboardDocs); };
+
+window.toggleDashboardTotalHis2021 = () => { dashboardShowTotalHis2021 = !dashboardShowTotalHis2021; renderDashboard(window.lastDashboardDocs); };
+window.toggleDashboardTotalHis2022 = () => { dashboardShowTotalHis2022 = !dashboardShowTotalHis2022; renderDashboard(window.lastDashboardDocs); };
+window.toggleDashboardTotalHis2023 = () => { dashboardShowTotalHis2023 = !dashboardShowTotalHis2023; renderDashboard(window.lastDashboardDocs); };
+window.toggleDashboardTotalHis2024 = () => { dashboardShowTotalHis2024 = !dashboardShowTotalHis2024; renderDashboard(window.lastDashboardDocs); };
+window.toggleDashboardTotalHis2025 = () => { dashboardShowTotalHis2025 = !dashboardShowTotalHis2025; renderDashboard(window.lastDashboardDocs); };
+
 window.toggleShowAllNRCs = () => {
     dashboardShowAllNRCs = !dashboardShowAllNRCs;
     renderDashboard(window.lastDashboardDocs);
@@ -2341,6 +2390,57 @@ function renderReportCard(title, data, companyKey = null) {
                     <input type="checkbox" onchange="toggleDashboardGoals()" ${dashboardHideGoals ? 'checked' : ''}>
                     Ocultar Metas y % de avance
                 </label>
+                <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin-top:10px; border-top:1px solid #e2e8f0; padding-top:10px;">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b;">
+                        <input type="checkbox" onchange="toggleDashboardIng2021()" ${dashboardShowIng2021 ? 'checked' : ''}> ING PAG. 2021
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b;">
+                        <input type="checkbox" onchange="toggleDashboardIng2022()" ${dashboardShowIng2022 ? 'checked' : ''}> ING PAG. 2022
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b;">
+                        <input type="checkbox" onchange="toggleDashboardIng2023()" ${dashboardShowIng2023 ? 'checked' : ''}> ING PAG. 2023
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b;">
+                        <input type="checkbox" onchange="toggleDashboardIng2024()" ${dashboardShowIng2024 ? 'checked' : ''}> ING PAG. 2024
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b;">
+                        <input type="checkbox" onchange="toggleDashboardIng2025()" ${dashboardShowIng2025 ? 'checked' : ''}> ING PAG. 2025
+                    </label>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin-top:5px; padding-top:5px;">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b;">
+                        <input type="checkbox" onchange="toggleDashboardIngPatrocinio2021()" ${dashboardShowIngPatrocinio2021 ? 'checked' : ''}> ING PATROCINIO 2021
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b;">
+                        <input type="checkbox" onchange="toggleDashboardIngPatrocinio2022()" ${dashboardShowIngPatrocinio2022 ? 'checked' : ''}> ING PATROCINIO 2022
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b;">
+                        <input type="checkbox" onchange="toggleDashboardIngPatrocinio2023()" ${dashboardShowIngPatrocinio2023 ? 'checked' : ''}> ING PATROCINIO 2023
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b;">
+                        <input type="checkbox" onchange="toggleDashboardIngPatrocinio2024()" ${dashboardShowIngPatrocinio2024 ? 'checked' : ''}> ING PATROCINIO 2024
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b;">
+                        <input type="checkbox" onchange="toggleDashboardIngPatrocinio2025()" ${dashboardShowIngPatrocinio2025 ? 'checked' : ''}> ING PATROCINIO 2025
+                    </label>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin-top:5px; padding-top:5px;">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b; font-weight:bold;">
+                        <input type="checkbox" onchange="toggleDashboardTotalHis2021()" ${dashboardShowTotalHis2021 ? 'checked' : ''}> TOTAL HIS 2021
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b; font-weight:bold;">
+                        <input type="checkbox" onchange="toggleDashboardTotalHis2022()" ${dashboardShowTotalHis2022 ? 'checked' : ''}> TOTAL HIS 2022
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b; font-weight:bold;">
+                        <input type="checkbox" onchange="toggleDashboardTotalHis2023()" ${dashboardShowTotalHis2023 ? 'checked' : ''}> TOTAL HIS 2023
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b; font-weight:bold;">
+                        <input type="checkbox" onchange="toggleDashboardTotalHis2024()" ${dashboardShowTotalHis2024 ? 'checked' : ''}> TOTAL HIS 2024
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b; font-weight:bold;">
+                        <input type="checkbox" onchange="toggleDashboardTotalHis2025()" ${dashboardShowTotalHis2025 ? 'checked' : ''}> TOTAL HIS 2025
+                    </label>
+                </div>
             </div>
         `;
     }
@@ -2361,6 +2461,21 @@ function renderReportCard(title, data, companyKey = null) {
             <th style="text-align:center; display:${dashboardShowPago ? 'table-cell' : 'none'};">Pago</th>
             <th style="text-align:right; display:${dashboardShowIngresoPatrocinio ? 'table-cell' : 'none'};">Ing. Patrocinio</th>
             <th style="text-align:right; display:${dashboardShowIngresoPago ? 'table-cell' : 'none'};">Ing. Pago</th>
+            <th style="text-align:right; display:${dashboardShowIng2021 ? 'table-cell' : 'none'};">ING 2021</th>
+            <th style="text-align:right; display:${dashboardShowIng2022 ? 'table-cell' : 'none'};">ING 2022</th>
+            <th style="text-align:right; display:${dashboardShowIng2023 ? 'table-cell' : 'none'};">ING 2023</th>
+            <th style="text-align:right; display:${dashboardShowIng2024 ? 'table-cell' : 'none'};">ING 2024</th>
+            <th style="text-align:right; display:${dashboardShowIng2025 ? 'table-cell' : 'none'};">ING 2025</th>
+            <th style="text-align:right; display:${dashboardShowIngPatrocinio2021 ? 'table-cell' : 'none'};">ING PATR. 2021</th>
+            <th style="text-align:right; display:${dashboardShowIngPatrocinio2022 ? 'table-cell' : 'none'};">ING PATR. 2022</th>
+            <th style="text-align:right; display:${dashboardShowIngPatrocinio2023 ? 'table-cell' : 'none'};">ING PATR. 2023</th>
+            <th style="text-align:right; display:${dashboardShowIngPatrocinio2024 ? 'table-cell' : 'none'};">ING PATR. 2024</th>
+            <th style="text-align:right; display:${dashboardShowIngPatrocinio2025 ? 'table-cell' : 'none'};">ING PATR. 2025</th>
+            <th style="text-align:right; display:${dashboardShowTotalHis2021 ? 'table-cell' : 'none'};">TOTAL HIS 2021</th>
+            <th style="text-align:right; display:${dashboardShowTotalHis2022 ? 'table-cell' : 'none'};">TOTAL HIS 2022</th>
+            <th style="text-align:right; display:${dashboardShowTotalHis2023 ? 'table-cell' : 'none'};">TOTAL HIS 2023</th>
+            <th style="text-align:right; display:${dashboardShowTotalHis2024 ? 'table-cell' : 'none'};">TOTAL HIS 2024</th>
+            <th style="text-align:right; display:${dashboardShowTotalHis2025 ? 'table-cell' : 'none'};">TOTAL HIS 2025</th>
             <th style="text-align:right;">Ingresos</th>
             <th style="text-align:right; color:#64748b; display:${dashboardHideGoals ? 'none' : 'table-cell'};">Meta</th>
             <th style="text-align:center; display:${dashboardHideGoals ? 'none' : 'table-cell'};">%</th>
@@ -2390,6 +2505,21 @@ function renderReportCard(title, data, companyKey = null) {
                     <td style="text-align:center; display:${dashboardShowPago ? 'table-cell' : 'none'};">${monthData.pago}</td>
                     <td style="text-align:right; display:${dashboardShowIngresoPatrocinio ? 'table-cell' : 'none'};">${currencyFormatter.format(monthData.ingresoPatrocinio)}</td>
                     <td style="text-align:right; display:${dashboardShowIngresoPago ? 'table-cell' : 'none'};">${currencyFormatter.format(monthData.ingresoPago)}</td>
+                    <td style="text-align:right; display:${dashboardShowIng2021 ? 'table-cell' : 'none'}; color:#64748b;">${currencyFormatter.format(HISTORICO_INGRESOS["2021"][monthKey])}</td>
+                    <td style="text-align:right; display:${dashboardShowIng2022 ? 'table-cell' : 'none'}; color:#64748b;">${currencyFormatter.format(HISTORICO_INGRESOS["2022"][monthKey])}</td>
+                    <td style="text-align:right; display:${dashboardShowIng2023 ? 'table-cell' : 'none'}; color:#64748b;">${currencyFormatter.format(HISTORICO_INGRESOS["2023"][monthKey])}</td>
+                    <td style="text-align:right; display:${dashboardShowIng2024 ? 'table-cell' : 'none'}; color:#64748b;">${currencyFormatter.format(HISTORICO_INGRESOS["2024"][monthKey])}</td>
+                    <td style="text-align:right; display:${dashboardShowIng2025 ? 'table-cell' : 'none'}; color:#64748b;">${currencyFormatter.format(HISTORICO_INGRESOS["2025"][monthKey])}</td>
+                    <td style="text-align:right; display:${dashboardShowIngPatrocinio2021 ? 'table-cell' : 'none'}; color:#64748b;">${currencyFormatter.format(HISTORICO_INGRESOS_PATROCINIO["2021"][monthKey])}</td>
+                    <td style="text-align:right; display:${dashboardShowIngPatrocinio2022 ? 'table-cell' : 'none'}; color:#64748b;">${currencyFormatter.format(HISTORICO_INGRESOS_PATROCINIO["2022"][monthKey])}</td>
+                    <td style="text-align:right; display:${dashboardShowIngPatrocinio2023 ? 'table-cell' : 'none'}; color:#64748b;">${currencyFormatter.format(HISTORICO_INGRESOS_PATROCINIO["2023"][monthKey])}</td>
+                    <td style="text-align:right; display:${dashboardShowIngPatrocinio2024 ? 'table-cell' : 'none'}; color:#64748b;">${currencyFormatter.format(HISTORICO_INGRESOS_PATROCINIO["2024"][monthKey])}</td>
+                    <td style="text-align:right; display:${dashboardShowIngPatrocinio2025 ? 'table-cell' : 'none'}; color:#64748b;">${currencyFormatter.format(HISTORICO_INGRESOS_PATROCINIO["2025"][monthKey])}</td>
+                    <td style="text-align:right; display:${dashboardShowTotalHis2021 ? 'table-cell' : 'none'}; color:#475569; font-weight:bold;">${currencyFormatter.format(HISTORICO_INGRESOS["2021"][monthKey] + HISTORICO_INGRESOS_PATROCINIO["2021"][monthKey])}</td>
+                    <td style="text-align:right; display:${dashboardShowTotalHis2022 ? 'table-cell' : 'none'}; color:#475569; font-weight:bold;">${currencyFormatter.format(HISTORICO_INGRESOS["2022"][monthKey] + HISTORICO_INGRESOS_PATROCINIO["2022"][monthKey])}</td>
+                    <td style="text-align:right; display:${dashboardShowTotalHis2023 ? 'table-cell' : 'none'}; color:#475569; font-weight:bold;">${currencyFormatter.format(HISTORICO_INGRESOS["2023"][monthKey] + HISTORICO_INGRESOS_PATROCINIO["2023"][monthKey])}</td>
+                    <td style="text-align:right; display:${dashboardShowTotalHis2024 ? 'table-cell' : 'none'}; color:#475569; font-weight:bold;">${currencyFormatter.format(HISTORICO_INGRESOS["2024"][monthKey] + HISTORICO_INGRESOS_PATROCINIO["2024"][monthKey])}</td>
+                    <td style="text-align:right; display:${dashboardShowTotalHis2025 ? 'table-cell' : 'none'}; color:#475569; font-weight:bold;">${currencyFormatter.format(HISTORICO_INGRESOS["2025"][monthKey] + HISTORICO_INGRESOS_PATROCINIO["2025"][monthKey])}</td>
                     <td style="text-align:right;">${currencyFormatter.format(monthData.income)}</td>
                     <td style="text-align:right; color:#64748b; font-size:0.75rem; display:${dashboardHideGoals ? 'none' : 'table-cell'};">${currencyFormatter.format(meta.income)}</td>
                     <td style="text-align:center; font-weight:bold; color:${pIngresos >= 1 ? '#10b981' : '#f59e0b'}; display:${dashboardHideGoals ? 'none' : 'table-cell'};">${percentFormatter.format(pIngresos)}</td>
@@ -2412,6 +2542,21 @@ function renderReportCard(title, data, companyKey = null) {
         const totalMetaIncome = Object.values(METAS_MENSUALES).reduce((a, b) => a + b.income, 0);
         const totalPAlumnos = totalMetaStudents > 0 ? displayData.total.students / totalMetaStudents : 0;
         const totalPIngresos = totalMetaIncome > 0 ? displayData.total.income / totalMetaIncome : 0;
+        
+        let sum2021 = 0, sum2022 = 0, sum2023 = 0, sum2024 = 0, sum2025 = 0;
+        let sumPatr2021 = 0, sumPatr2022 = 0, sumPatr2023 = 0, sumPatr2024 = 0, sumPatr2025 = 0;
+        monthsToDisplay.forEach(m => {
+            sum2021 += HISTORICO_INGRESOS["2021"][m];
+            sum2022 += HISTORICO_INGRESOS["2022"][m];
+            sum2023 += HISTORICO_INGRESOS["2023"][m];
+            sum2024 += HISTORICO_INGRESOS["2024"][m];
+            sum2025 += HISTORICO_INGRESOS["2025"][m];
+            sumPatr2021 += HISTORICO_INGRESOS_PATROCINIO["2021"][m];
+            sumPatr2022 += HISTORICO_INGRESOS_PATROCINIO["2022"][m];
+            sumPatr2023 += HISTORICO_INGRESOS_PATROCINIO["2023"][m];
+            sumPatr2024 += HISTORICO_INGRESOS_PATROCINIO["2024"][m];
+            sumPatr2025 += HISTORICO_INGRESOS_PATROCINIO["2025"][m];
+        });
 
         footerHTML = `<tfoot><tr>
             <td><strong>Total</strong></td>
@@ -2425,6 +2570,21 @@ function renderReportCard(title, data, companyKey = null) {
             <td style="text-align:center; display:${dashboardShowPago ? 'table-cell' : 'none'};"><strong>${displayData.total.pago}</strong></td>
             <td style="text-align:right; display:${dashboardShowIngresoPatrocinio ? 'table-cell' : 'none'};"><strong>${currencyFormatter.format(displayData.total.ingresoPatrocinio)}</strong></td>
             <td style="text-align:right; display:${dashboardShowIngresoPago ? 'table-cell' : 'none'};"><strong>${currencyFormatter.format(displayData.total.ingresoPago)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowIng2021 ? 'table-cell' : 'none'}; color:#64748b;"><strong>${currencyFormatter.format(sum2021)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowIng2022 ? 'table-cell' : 'none'}; color:#64748b;"><strong>${currencyFormatter.format(sum2022)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowIng2023 ? 'table-cell' : 'none'}; color:#64748b;"><strong>${currencyFormatter.format(sum2023)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowIng2024 ? 'table-cell' : 'none'}; color:#64748b;"><strong>${currencyFormatter.format(sum2024)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowIng2025 ? 'table-cell' : 'none'}; color:#64748b;"><strong>${currencyFormatter.format(sum2025)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowIngPatrocinio2021 ? 'table-cell' : 'none'}; color:#64748b;"><strong>${currencyFormatter.format(sumPatr2021)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowIngPatrocinio2022 ? 'table-cell' : 'none'}; color:#64748b;"><strong>${currencyFormatter.format(sumPatr2022)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowIngPatrocinio2023 ? 'table-cell' : 'none'}; color:#64748b;"><strong>${currencyFormatter.format(sumPatr2023)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowIngPatrocinio2024 ? 'table-cell' : 'none'}; color:#64748b;"><strong>${currencyFormatter.format(sumPatr2024)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowIngPatrocinio2025 ? 'table-cell' : 'none'}; color:#64748b;"><strong>${currencyFormatter.format(sumPatr2025)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowTotalHis2021 ? 'table-cell' : 'none'}; color:#475569;"><strong>${currencyFormatter.format(sum2021 + sumPatr2021)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowTotalHis2022 ? 'table-cell' : 'none'}; color:#475569;"><strong>${currencyFormatter.format(sum2022 + sumPatr2022)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowTotalHis2023 ? 'table-cell' : 'none'}; color:#475569;"><strong>${currencyFormatter.format(sum2023 + sumPatr2023)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowTotalHis2024 ? 'table-cell' : 'none'}; color:#475569;"><strong>${currencyFormatter.format(sum2024 + sumPatr2024)}</strong></td>
+            <td style="text-align:right; display:${dashboardShowTotalHis2025 ? 'table-cell' : 'none'}; color:#475569;"><strong>${currencyFormatter.format(sum2025 + sumPatr2025)}</strong></td>
             <td style="text-align:right;"><strong>${currencyFormatter.format(displayData.total.income)}</strong></td>
             <td style="text-align:right; display:${dashboardHideGoals ? 'none' : 'table-cell'};"><strong>${currencyFormatter.format(totalMetaIncome)}</strong></td>
             <td style="text-align:center; display:${dashboardHideGoals ? 'none' : 'table-cell'};"><strong>${percentFormatter.format(totalPIngresos)}</strong></td>
