@@ -2388,7 +2388,7 @@ function renderReportCard(title, data, companyKey = null) {
                 </label>
                 <label style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:5px; font-size:0.85rem; cursor:pointer; color:#64748b;">
                     <input type="checkbox" onchange="toggleDashboardGoals()" ${dashboardHideGoals ? 'checked' : ''}>
-                    Ocultar Metas y % de avance
+                    Ocultar Metas, % de avance y ALUMNOS
                 </label>
                 <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin-top:10px; border-top:1px solid #e2e8f0; padding-top:10px;">
                     <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer; color:#64748b;">
@@ -2451,7 +2451,7 @@ function renderReportCard(title, data, companyKey = null) {
     const tableHeader = isGeneral 
         ? `<thead><tr>
             <th>Mes</th>
-            <th style="text-align:center;">Alumnos</th>
+            <th style="text-align:center; display:${dashboardHideGoals ? 'none' : 'table-cell'};">Alumnos</th>
             <th style="text-align:center; color:#64748b; display:${dashboardHideGoals ? 'none' : 'table-cell'};">Meta</th>
             <th style="text-align:center; display:${dashboardHideGoals ? 'none' : 'table-cell'};">%</th>
             <th style="text-align:center; display:${dashboardShowHours ? 'table-cell' : 'none'};">Horas-Alumno</th>
@@ -2495,7 +2495,7 @@ function renderReportCard(title, data, companyKey = null) {
             return `
                 <tr>
                     <td>${MESES[monthKey]}</td>
-                    <td style="text-align:center;">${monthData.students}</td>
+                    <td style="text-align:center; display:${dashboardHideGoals ? 'none' : 'table-cell'};">${monthData.students}</td>
                     <td style="text-align:center; color:#64748b; font-size:0.75rem; display:${dashboardHideGoals ? 'none' : 'table-cell'};">${meta.students}</td>
                     <td style="text-align:center; font-weight:bold; color:${pAlumnos >= 1 ? '#10b981' : '#f59e0b'}; display:${dashboardHideGoals ? 'none' : 'table-cell'};">${percentFormatter.format(pAlumnos)}</td>
                     <td style="text-align:center; display:${dashboardShowHours ? 'table-cell' : 'none'};">${monthData.hours.toLocaleString()}</td>
@@ -2560,7 +2560,7 @@ function renderReportCard(title, data, companyKey = null) {
 
         footerHTML = `<tfoot><tr>
             <td><strong>Total</strong></td>
-            <td style="text-align:center;"><strong>${displayData.total.students}</strong></td>
+            <td style="text-align:center; display:${dashboardHideGoals ? 'none' : 'table-cell'};"><strong>${displayData.total.students}</strong></td>
             <td style="text-align:center; display:${dashboardHideGoals ? 'none' : 'table-cell'};"><strong>${totalMetaStudents}</strong></td>
             <td style="text-align:center; display:${dashboardHideGoals ? 'none' : 'table-cell'};"><strong>${percentFormatter.format(totalPAlumnos)}</strong></td>
             <td style="text-align:center; display:${dashboardShowHours ? 'table-cell' : 'none'};"><strong>${displayData.total.hours.toLocaleString()}</strong></td>
