@@ -1786,10 +1786,6 @@ let dashboardShowAllNRCs = false; // Estado para mostrar todos los NRCs en la ta
 let dashboardSelectedYear = new Date().getFullYear().toString(); // Año seleccionado por defecto
 let dashboardSelectedMonth = 'all'; // Mes seleccionado por defecto
 
-// Variables para instancias de gráficos
-let chartStudentsInstance = null;
-let chartIncomeInstance = null;
-
 const MESES = {
     "01": "Enero", "02": "Febrero", "03": "Marzo", "04": "Abril",
     "05": "Mayo", "06": "Junio", "07": "Julio", "08": "Agosto",
@@ -2036,14 +2032,14 @@ function renderDashboard(docs) {
         return true;
     });
 
+    window.lastDashboardReports = reports;
+
     // Renderizar los reportes
     let dashboardHTML = renderReportCard(`Resumen General ${dashboardSelectedYear}`, reports.general);
     
     // Agregar contenedores para los gráficos justo debajo del resumen general
     dashboardHTML += `
-        <div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 2rem;">
-            <div class="report-card" style="height: 350px;"><canvas id="chartStudents"></canvas></div>
-            <div class="report-card" style="height: 350px;"><canvas id="chartIncome"></canvas></div>
+        <div id="dynamicChartsContainer" style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 2rem;">
         </div>
     `;
 
@@ -2059,62 +2055,8 @@ function renderDashboard(docs) {
     // Actualizar campo oculto con el total de NRCs
     const hiddenNRC = document.getElementById('hiddenTotalNRC');
     if (hiddenNRC) hiddenNRC.value = reports.general.total.nrcCount;
-
-    // Renderizar los gráficos después de que los elementos existan en el DOM
-    renderDashboardCharts(reports.general);
 }
 
-function renderDashboardCharts(generalData) {
-    const ctxS = document.getElementById('chartStudents');
-    const ctxI = document.getElementById('chartIncome');
-    if (!ctxS || !ctxI || typeof Chart === 'undefined') return;
-
-    const labels = ORDERED_MONTH_KEYS.map(k => MESES[k]);
-    const realStudents = ORDERED_MONTH_KEYS.map(k => generalData[k].students);
-    const metaStudents = ORDERED_MONTH_KEYS.map(k => METAS_MENSUALES[k].students);
-    const realIncome = ORDERED_MONTH_KEYS.map(k => generalData[k].income);
-    const metaIncome = ORDERED_MONTH_KEYS.map(k => METAS_MENSUALES[k].income);
-
-    if (chartStudentsInstance) chartStudentsInstance.destroy();
-    if (chartIncomeInstance) chartIncomeInstance.destroy();
-
-    const commonOptions = (title) => ({
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
-            title: { display: true, text: title, font: { size: 15, weight: 'bold' }, padding: { bottom: 20 }, color: '#1e293b' }
-        },
-        scales: {
-            y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
-            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
-        }
-    });
-
-    chartStudentsInstance = new Chart(ctxS, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [
-                { label: 'Alumnos Reales', data: realStudents, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.4, pointRadius: 3 },
-                { label: 'Meta Alumnos', data: metaStudents, borderColor: '#94a3b8', borderDash: [5, 5], fill: false, tension: 0, pointRadius: 0 }
-            ]
-        },
-        options: commonOptions('Tendencia de Alumnos vs Meta')
-    });
-
-    chartIncomeInstance = new Chart(ctxI, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [
-                { label: 'Ingresos Reales', data: realIncome, borderColor: '#0ea5e9', backgroundColor: 'rgba(14, 165, 233, 0.1)', fill: true, tension: 0.4, pointRadius: 3 },
-                { label: 'Meta Ingresos', data: metaIncome, borderColor: '#94a3b8', borderDash: [5, 5], fill: false, tension: 0, pointRadius: 0 }
-            ]
-        },
-        options: commonOptions('Tendencia de Ingresos vs Meta')
-    });
-}
 
 // Funciones globales para interacción con los filtros del dashboard
 window.changeDashboardYear = (year) => {
@@ -2232,6 +2174,144 @@ window.downloadNRCTableImage = () => {
         link.download = `Detalle_NRC_${dashboardSelectedYear}_Mes_${dashboardSelectedMonth}_${date}.png`;
         link.href = canvas.toDataURL("image/png");
         link.click();
+    });
+};
+
+window.generateDynamicCharts = () => {
+    const container = document.getElementById('dynamicChartsContainer');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    const generalData = window.lastDashboardReports?.general;
+    if (!generalData) return;
+
+    const labels = ORDERED_MONTH_KEYS.map(k => MESES[k]);
+    const chartsToCreate = [];
+    
+    // Gráfico 1: Alumnos y Metas (si no están ocultos)
+    if (!dashboardHideGoals) {
+        chartsToCreate.push({
+            id: 'chartDynStudents',
+            title: 'Tendencia de Alumnos vs Meta',
+            datasets: [
+                { label: 'Alumnos Reales', data: ORDERED_MONTH_KEYS.map(k => generalData[k].students), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.4, pointRadius: 3 },
+                { label: 'Meta Alumnos', data: ORDERED_MONTH_KEYS.map(k => METAS_MENSUALES[k].students), borderColor: '#94a3b8', borderDash: [5, 5], fill: false, tension: 0, pointRadius: 0 }
+            ]
+        });
+    }
+
+    // Gráfico 2: Ingresos Generales vs Meta
+    chartsToCreate.push({
+        id: 'chartDynIncome',
+        title: 'Tendencia de Ingresos vs Meta',
+        datasets: [
+            { label: 'Ingresos Reales', data: ORDERED_MONTH_KEYS.map(k => generalData[k].income), borderColor: '#0ea5e9', backgroundColor: 'rgba(14, 165, 233, 0.1)', fill: true, tension: 0.4, pointRadius: 3 },
+            ...(!dashboardHideGoals ? [{ label: 'Meta Ingresos', data: ORDERED_MONTH_KEYS.map(k => METAS_MENSUALES[k].income), borderColor: '#94a3b8', borderDash: [5, 5], fill: false, tension: 0, pointRadius: 0 }] : [])
+        ]
+    });
+
+    // Gráfico 3: Métricas Adicionales (Horas, NRC, tipos de alumnos)
+    const extraMetricsDatasets = [];
+    if (dashboardShowHours) extraMetricsDatasets.push({ label: 'Horas-Alumno', data: ORDERED_MONTH_KEYS.map(k => generalData[k].hours), borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', fill: true, tension: 0.4, pointRadius: 3 });
+    if (dashboardShowNRC) extraMetricsDatasets.push({ label: 'Cant. NRC', data: ORDERED_MONTH_KEYS.map(k => generalData[k].nrcCount), borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', fill: true, tension: 0.4, pointRadius: 3 });
+    if (dashboardShowPatrocinio) extraMetricsDatasets.push({ label: 'Patrocinio', data: ORDERED_MONTH_KEYS.map(k => generalData[k].patrocinio), borderColor: '#ec4899', backgroundColor: 'rgba(225, 29, 72, 0.1)', fill: true, tension: 0.4, pointRadius: 3 });
+    if (dashboardShowBeca) extraMetricsDatasets.push({ label: 'Beca', data: ORDERED_MONTH_KEYS.map(k => generalData[k].beca), borderColor: '#14b8a6', backgroundColor: 'rgba(20, 184, 166, 0.1)', fill: true, tension: 0.4, pointRadius: 3 });
+    if (dashboardShowPago) extraMetricsDatasets.push({ label: 'Pago', data: ORDERED_MONTH_KEYS.map(k => generalData[k].pago), borderColor: '#f43f5e', backgroundColor: 'rgba(244, 63, 94, 0.1)', fill: true, tension: 0.4, pointRadius: 3 });
+    
+    if (extraMetricsDatasets.length > 0) {
+        chartsToCreate.push({
+            id: 'chartDynExtra',
+            title: 'Métricas Adicionales Activas',
+            datasets: extraMetricsDatasets
+        });
+    }
+
+    // Gráfico 4: Análisis de Ingresos Comparativo e Histórico
+    const incomeDatasets = [];
+    if (dashboardShowIngresoPatrocinio) incomeDatasets.push({ label: 'Ingreso Patrocinio', data: ORDERED_MONTH_KEYS.map(k => generalData[k].ingresoPatrocinio), borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', fill: true, tension: 0.4, pointRadius: 3 });
+    if (dashboardShowIngresoPago) incomeDatasets.push({ label: 'Ingreso Pago', data: ORDERED_MONTH_KEYS.map(k => generalData[k].ingresoPago), borderColor: '#f43f5e', backgroundColor: 'rgba(244, 63, 94, 0.1)', fill: true, tension: 0.4, pointRadius: 3 });
+    
+    const historicoYears = [
+        { vis: dashboardShowIng2021, year: "2021", data: HISTORICO_INGRESOS, color: '#94a3b8' },
+        { vis: dashboardShowIng2022, year: "2022", data: HISTORICO_INGRESOS, color: '#64748b' },
+        { vis: dashboardShowIng2023, year: "2023", data: HISTORICO_INGRESOS, color: '#475569' },
+        { vis: dashboardShowIng2024, year: "2024", data: HISTORICO_INGRESOS, color: '#334155' },
+        { vis: dashboardShowIng2025, year: "2025", data: HISTORICO_INGRESOS, color: '#1e293b' },
+        { vis: dashboardShowIngPatrocinio2021, year: "2021", data: HISTORICO_INGRESOS_PATROCINIO, color: '#c084fc', label: 'Patr.' },
+        { vis: dashboardShowIngPatrocinio2022, year: "2022", data: HISTORICO_INGRESOS_PATROCINIO, color: '#a855f7', label: 'Patr.' },
+        { vis: dashboardShowIngPatrocinio2023, year: "2023", data: HISTORICO_INGRESOS_PATROCINIO, color: '#9333ea', label: 'Patr.' },
+        { vis: dashboardShowIngPatrocinio2024, year: "2024", data: HISTORICO_INGRESOS_PATROCINIO, color: '#7e22ce', label: 'Patr.' },
+        { vis: dashboardShowIngPatrocinio2025, year: "2025", data: HISTORICO_INGRESOS_PATROCINIO, color: '#6b21a8', label: 'Patr.' }
+    ];
+
+    historicoYears.forEach(h => {
+        if (h.vis) {
+            incomeDatasets.push({
+                label: `Ingreso ${h.label ? h.label + ' ' : ''}${h.year}`,
+                data: ORDERED_MONTH_KEYS.map(k => h.data[h.year][k]),
+                borderColor: h.color,
+                borderDash: [2, 2],
+                fill: false,
+                tension: 0.2,
+                pointRadius: 2
+            });
+        }
+    });
+
+    if (dashboardShowTotalHis2021) incomeDatasets.push({ label: 'Total Hist. 2021', data: ORDERED_MONTH_KEYS.map(k => HISTORICO_INGRESOS["2021"][k] + HISTORICO_INGRESOS_PATROCINIO["2021"][k]), borderColor: '#fbbf24', borderDash: [3, 3], fill: false, tension: 0.2, pointRadius: 2 });
+    if (dashboardShowTotalHis2022) incomeDatasets.push({ label: 'Total Hist. 2022', data: ORDERED_MONTH_KEYS.map(k => HISTORICO_INGRESOS["2022"][k] + HISTORICO_INGRESOS_PATROCINIO["2022"][k]), borderColor: '#f59e0b', borderDash: [3, 3], fill: false, tension: 0.2, pointRadius: 2 });
+    if (dashboardShowTotalHis2023) incomeDatasets.push({ label: 'Total Hist. 2023', data: ORDERED_MONTH_KEYS.map(k => HISTORICO_INGRESOS["2023"][k] + HISTORICO_INGRESOS_PATROCINIO["2023"][k]), borderColor: '#d97706', borderDash: [3, 3], fill: false, tension: 0.2, pointRadius: 2 });
+    if (dashboardShowTotalHis2024) incomeDatasets.push({ label: 'Total Hist. 2024', data: ORDERED_MONTH_KEYS.map(k => HISTORICO_INGRESOS["2024"][k] + HISTORICO_INGRESOS_PATROCINIO["2024"][k]), borderColor: '#b45309', borderDash: [3, 3], fill: false, tension: 0.2, pointRadius: 2 });
+    if (dashboardShowTotalHis2025) incomeDatasets.push({ label: 'Total Hist. 2025', data: ORDERED_MONTH_KEYS.map(k => HISTORICO_INGRESOS["2025"][k] + HISTORICO_INGRESOS_PATROCINIO["2025"][k]), borderColor: '#92400e', borderDash: [3, 3], fill: false, tension: 0.2, pointRadius: 2 });
+
+    if (incomeDatasets.length > 0) {
+        // Añadir el ingreso real del año actual seleccionado como base comparativa
+        incomeDatasets.unshift({
+            label: `Ingreso Real ${dashboardSelectedYear}`,
+            data: ORDERED_MONTH_KEYS.map(k => generalData[k].income),
+            borderColor: '#0ea5e9',
+            backgroundColor: 'rgba(14, 165, 233, 0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 3
+        });
+
+        chartsToCreate.push({
+            id: 'chartDynIncomeDetail',
+            title: 'Análisis Detallado y Comparativo de Ingresos',
+            datasets: incomeDatasets
+        });
+    }
+
+    let html = '';
+    chartsToCreate.forEach(chartConfig => {
+        html += `<div class="report-card" style="height: 350px;"><canvas id="${chartConfig.id}"></canvas></div>`;
+    });
+    container.innerHTML = html;
+
+    const commonOptions = (title) => ({
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+            title: { display: true, text: title, font: { size: 15, weight: 'bold' }, padding: { bottom: 20 }, color: '#1e293b' }
+        },
+        scales: {
+            y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+        }
+    });
+
+    chartsToCreate.forEach(chartConfig => {
+        const ctx = document.getElementById(chartConfig.id);
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets: chartConfig.datasets },
+                options: commonOptions(chartConfig.title)
+            });
+        }
     });
 };
 
@@ -2356,6 +2436,9 @@ function renderReportCard(title, data, companyKey = null) {
             <div style="margin-bottom: 15px;">
                 <button onclick="toggleGeneralDashboardMode()" style="width:100%; padding:10px; background:${isAdjusted ? '#475569' : '#0ea5e9'}; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:8px; transition: background 0.2s;">
                     ${isAdjusted ? '↩️ Restaurar Valores Reales' : '⚡ Actualizar con Filtros Aplicados'}
+                </button>
+                <button type="button" onclick="generateDynamicCharts()" style="width:100%; margin-top:10px; padding:10px; background:#8b5cf6; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:8px; transition: background 0.2s;">
+                    📊 Generar Gráficos de Datos Visibles
                 </button>
                 ${isAdjusted ? '<div style="margin-top:8px; font-size:0.75rem; color:#ef4444; text-align:center; background:#fef2f2; padding:4px; border-radius:4px; border:1px solid #fecaca;">⚠️ Visualizando proyección ajustada (Ingresos/Alumnos reducidos)</div>' : ''}
                 <label style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px; font-size:0.85rem; cursor:pointer; color:#64748b;">
