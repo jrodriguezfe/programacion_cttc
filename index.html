@@ -83,13 +83,16 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Fecha Inicio</th>
+                            <th id="btnSortFecha" style="cursor:pointer; user-select:none; white-space:nowrap; background-color:#e2e8f0; color:#0f172a; border-radius:4px;" title="Clic para cambiar el orden">Fecha Inicio <span id="sortIconDate">🔼</span></th>
                             <th>Programa</th>
                             <th>Modulo / Curso</th>
                             <th>Docente</th>
                             <th>Duración</th>
                             <th>Horario</th>
-                            <th>NRC</th>
+                            <th>
+                                NRC<br>
+                                <input type="text" id="nrcFilterInput" placeholder="Filtrar NRC..." style="margin-top: 4px; padding: 4px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #cbd5e1; width: 100%; box-sizing: border-box; font-weight: normal;" onclick="event.stopPropagation();">
+                            </th>
                             <th>Part. Objetivo</th>
                             <th>Part. Real</th>
                         </tr>

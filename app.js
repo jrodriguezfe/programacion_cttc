@@ -43,9 +43,11 @@ let currentMonth = "all";
 let currentDocente = "all";
 let currentPrograma = "all";
 let currentModuloQuery = "";
+let currentNrcQuery = "";
 let hideStartedCourses = false;
 let userLogged = null;
 let lastSnapshotData = [];
+let sortDateAsc = true; // Control de orden ascendente/descendente de fecha
 
 let selectedEmpresas = []; // Almacena las empresas marcadas
 
@@ -108,6 +110,13 @@ function renderFromData(rawData) {
                 if (!mod.includes(q) && !prog.includes(q)) return false;
             }
 
+            // Filtro por NRC
+            if (currentNrcQuery.trim() !== '') {
+                const qNrc = currentNrcQuery.toLowerCase();
+                const nrcVal = (d.NRC || '').toLowerCase();
+                if (!nrcVal.includes(qNrc)) return false;
+            }
+
             // Filtro para ocultar cursos iniciados
             if (hideStartedCourses) {
                 const fechaInicio = d["Fecha de inicio"];
@@ -138,16 +147,16 @@ function renderFromData(rawData) {
             }
         });
 
-        // 4. Renderizado de Programas Agrupados
+        // 4. Crear bloques para ordenar globalmente
+        const renderBlocks = [];
+
         Object.keys(programasMap).forEach(nombreProg => {
             const modulos = programasMap[nombreProg];
 
-            // Verificar si el Módulo 1 está presente en el filtro actual
-            // Si no está el módulo 1 (ej. filtro por mes posterior o ya inició y se ocultó), mostrar como filas independientes
             const tieneModuloUno = modulos.some(m => (parseInt(m["Modulo Orden"]) || 0) === 1);
 
             if (!tieneModuloUno) {
-                modulos.forEach(m => tbody.appendChild(createDataRow(m, 'curso-row-style')));
+                modulos.forEach(m => renderBlocks.push({ type: 'curso', data: m, date: m["Fecha de inicio"] || "9999-12-31" }));
                 return;
             }
 
@@ -157,6 +166,32 @@ function renderFromData(rawData) {
             const modulosOrdenados = [...modulos].sort((a, b) => new Date(a["Fecha de inicio"]) - new Date(b["Fecha de inicio"]));
             const primerModulo = modulosOrdenados[0];
             
+            renderBlocks.push({ 
+                type: 'programa', 
+                nombreProg, 
+                progId,
+                modulos: modulosOrdenados, 
+                primerModulo,
+                date: primerModulo["Fecha de inicio"] || "9999-12-31" 
+            });
+        });
+
+        independientes.forEach(c => renderBlocks.push({ type: 'curso', data: c, date: c["Fecha de inicio"] || "9999-12-31" }));
+
+        // 5. Ordenar bloques por fecha
+        renderBlocks.sort((a, b) => {
+            const valA = a.date === "9999-12-31" ? Infinity : new Date(a.date).getTime();
+            const valB = b.date === "9999-12-31" ? Infinity : new Date(b.date).getTime();
+            return sortDateAsc ? (valA - valB) : (valB - valA);
+        });
+
+        // 6. Renderizado Final ordenado
+        renderBlocks.forEach(block => {
+            if (block.type === 'curso') {
+                tbody.appendChild(createDataRow(block.data, 'curso-row-style'));
+            } else {
+                const { nombreProg, progId, modulos, primerModulo } = block;
+
             // Datos de cabecera de programa
             const codigoProg = primerModulo["f_CODIGO_PROGRAMA"] || primerModulo["PROGRAMA"] || 'Sin Código';
             const partObjetivoProg = parseInt(primerModulo["#Participantes Objetivo"]) || 0;
@@ -187,13 +222,11 @@ function renderFromData(rawData) {
             };
 
             tbody.appendChild(trMaster);
-            modulosOrdenados.forEach(m => {
+            modulos.forEach(m => {
                 tbody.appendChild(createDataRow(m, `prog-child-${progId} hidden-row child-row-style`));
             });
+            }
         });
-
-        // 5. Renderizado de Cursos Independientes
-        independientes.forEach(c => tbody.appendChild(createDataRow(c, 'curso-row-style')));
 
     } catch (err) {
         console.error('Error en renderFromData:', err);
@@ -437,6 +470,17 @@ document.getElementById('docenteFilter').onchange = (e) => { currentDocente = e.
 document.getElementById('programaFilter').onchange = (e) => { currentPrograma = e.target.value; renderFromData(lastSnapshotData); };
 document.getElementById('moduloFilter').oninput = (e) => { currentModuloQuery = e.target.value; renderFromData(lastSnapshotData); };
 document.getElementById('hideStartedFilter').onchange = (e) => { hideStartedCourses = e.target.checked; renderFromData(lastSnapshotData); };
+const nrcFilterInput = document.getElementById('nrcFilterInput'); if (nrcFilterInput) { nrcFilterInput.oninput = (e) => { currentNrcQuery = e.target.value; renderFromData(lastSnapshotData); }; }
+
+// Evento para ordenar por fecha desde el encabezado de tabla
+const btnSortFecha = document.getElementById('btnSortFecha');
+if (btnSortFecha) {
+    btnSortFecha.onclick = () => {
+        sortDateAsc = !sortDateAsc;
+        document.getElementById('sortIconDate').textContent = sortDateAsc ? '🔼' : '🔽';
+        renderFromData(lastSnapshotData);
+    };
+}
 
 // Eventos para el modal de detalles NRC
 document.getElementById('btnCloseNrcModal').onclick = () => {
