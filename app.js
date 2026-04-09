@@ -48,6 +48,7 @@ let hideStartedCourses = false;
 let userLogged = null;
 let lastSnapshotData = [];
 let sortDateAsc = true; // Control de orden ascendente/descendente de fecha
+let defaultHojaHTML = null; // Plantilla base para Hoja de Especificaciones
 
 let selectedEmpresas = []; // Almacena las empresas marcadas
 
@@ -391,6 +392,104 @@ function openQuickEdit(id, data) {
     });
 
     document.getElementById('q_Total_Calculado').textContent = sumaActual;
+
+    // --- POBLAR HOJA DE ESPECIFICACIONES (NUEVO PANEL) ---
+    const hojaContent = document.getElementById('hojaEspecificacionesContent');
+    if (!defaultHojaHTML && hojaContent) {
+        defaultHojaHTML = hojaContent.innerHTML;
+    }
+    if (hojaContent && defaultHojaHTML) {
+        hojaContent.innerHTML = defaultHojaHTML;
+    }
+
+    const editableFields = document.querySelectorAll('#hojaEspecificacionesContent .editable-field');
+    const checkboxes = document.querySelectorAll('#hojaEspecificacionesContent input[type="checkbox"]');
+
+    if (data.hojaData) {
+        if (data.hojaData.textos) {
+            editableFields.forEach((el, i) => {
+                if (data.hojaData.textos[i] !== undefined) el.innerHTML = data.hojaData.textos[i];
+            });
+        }
+        if (data.hojaData.checks) {
+            checkboxes.forEach((el, i) => {
+                if (data.hojaData.checks[i] !== undefined) el.checked = data.hojaData.checks[i];
+            });
+        }
+    }
+
+    editableFields.forEach(el => el.setAttribute('contenteditable', userLogged ? 'true' : 'false'));
+    checkboxes.forEach(el => el.disabled = !userLogged);
+
+    const elHojaCurso = document.getElementById('hoja_curso');
+    if (elHojaCurso) {
+        elHojaCurso.textContent = data["MODULO-CURSO"] || data["PROGRAMA"] || "---";
+        document.getElementById('hoja_nrc').textContent = data.NRC || "---";
+        
+        const totalParts = data["#Participantes Objetivo"] || data["#Participantes Real Total"] || "15";
+        document.getElementById('hoja_participantes').textContent = totalParts;
+        document.getElementById('hoja_aula_cap').textContent = totalParts;
+        
+        document.getElementById('hoja_duracion').textContent = data.Duracion || data.Duración || "0";
+        
+        const parseDateStr = (dateStr) => {
+            if(!dateStr) return '---';
+            const parts = dateStr.split('-');
+            if(parts.length !== 3) return dateStr;
+            const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            return `${parts[2]} de ${months[parseInt(parts[1])-1]}`;
+        };
+        
+        document.getElementById('hoja_inicio').textContent = parseDateStr(data["Fecha de inicio"]);
+        document.getElementById('hoja_fin').textContent = parseDateStr(data["Fecha de fin"]);
+        document.getElementById('hoja_anio').textContent = data["Fecha de inicio"] ? data["Fecha de inicio"].split('-')[0] : '2026';
+        
+        let frecuencia = "---";
+        let horarioTexto = "---";
+        if (data.Horario) {
+            const match = data.Horario.match(/:\s*(.*?)\s*\((.*?)\)/);
+            if (match) {
+                frecuencia = match[1].replace(/-/g, ', ');
+                horarioTexto = match[2];
+            } else {
+                frecuencia = data.Horario;
+                horarioTexto = "Según frecuencia";
+            }
+        }
+        document.getElementById('hoja_frecuencia').textContent = frecuencia;
+        document.getElementById('hoja_horario').textContent = horarioTexto;
+        document.getElementById('hoja_docente').textContent = data.Docente || "---";
+        
+        const today = new Date();
+        const todayStr = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()}`;
+        document.querySelectorAll('.hoja_hoy').forEach(el => el.textContent = todayStr);
+
+        // Poblar Checklist
+        const chkTitle = document.getElementById('checklist_title');
+        if (chkTitle) {
+            chkTitle.textContent = `${data["MODULO-CURSO"] || data["PROGRAMA"] || "---"} / NRC: ${data.NRC || "---"}`;
+        }
+
+        // Habilitar la descarga en PDF
+        const btnPdf = document.getElementById('btnDownloadSpecPDF');
+        if (btnPdf) {
+            btnPdf.onclick = () => {
+                const element = document.getElementById('hojaEspecificacionesContent');
+                const opt = {
+                    margin:       0.3,
+                    filename:     `Hoja_Especificaciones_NRC_${data.NRC || 'Curso'}.pdf`,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, useCORS: true },
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+                    pagebreak:    { mode: ['css', 'legacy'] }
+                };
+                if (typeof html2pdf !== 'undefined') html2pdf().set(opt).from(element).save();
+                else alert("Librería PDF cargando. Espere un momento.");
+            };
+        }
+    }
+    // -----------------------------------------------------
+
     const adminActions = document.getElementById('modalAdminActions');
     const inputs = modal.querySelectorAll('.q-input');
     
@@ -444,6 +543,13 @@ if (btnSaveQuick) {
 
         // Actualiza también el total sumado automáticamente
         updates["#Participantes Real Total"] = totalReal;
+
+        // Capturar estado de Hoja de Especificaciones
+        const hojaData = {
+            textos: Array.from(document.querySelectorAll('#hojaEspecificacionesContent .editable-field')).map(el => el.innerHTML),
+            checks: Array.from(document.querySelectorAll('#hojaEspecificacionesContent input[type="checkbox"]')).map(el => el.checked)
+        };
+        updates["hojaData"] = hojaData;
 
         try {
             // Actualización atómica en Firebase Firestore

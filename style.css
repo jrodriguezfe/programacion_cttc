@@ -607,6 +607,19 @@ details[open] summary span:last-child {
     transform: rotate(180deg);
 }
 
+/* Campos Editables en Modal (Hoja de Especificaciones) */
+.editable-field {
+    outline: none;
+    transition: background 0.2s, box-shadow 0.2s;
+    padding: 0 4px;
+    border-radius: 3px;
+}
+.editable-field:hover, .editable-field:focus {
+    background: #f0f9ff;
+    box-shadow: 0 0 0 1px #0ea5e9;
+    cursor: text;
+}
+
 /* Efecto hover en las opciones del desplegable */
 #empresaCheckboxContainer label:hover {
     background-color: #f1f5f9;

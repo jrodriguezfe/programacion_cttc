@@ -104,7 +104,10 @@
         </main>
 
         <div id="quickEditModal" class="modal hidden">
-            <div class="modal-content shadow" style="max-width: 500px; padding: 2rem; border-radius: 15px; background: #fff;">
+            <div class="modal-wrapper" style="display: flex; flex-wrap: wrap; gap: 20px; width: 95%; max-width: 1400px; max-height: 95vh; justify-content: center; align-items: flex-start;">
+                
+                <!-- PANEL IZQUIERDO: GESTIÓN DE PROGRAMACIÓN -->
+                <div class="modal-content shadow" style="flex: 1 1 400px; max-width: 500px; padding: 2rem; border-radius: 15px; background: #fff; max-height: 95vh; overflow-y: auto;">
                 <header style="text-align: center; margin-bottom: 1.5rem;">
                     <h3 style="color: #0054a6; margin: 0; font-size: 1.2rem;">Gestión de Programación</h3>
                     <p id="courseNameTitle" style="color: #10b981; font-weight: bold; margin: 5px 0; font-size: 0.9rem;"></p>
@@ -143,10 +146,200 @@
                 </div>
 
                 <div id="modalAdminActions" class="hidden" style="display: flex; flex-direction: column; gap: 8px;">
-                    <button id="btnSaveQuick" class="btn-save" style="width: 100%; padding: 10px; background: #10b981; border: none; color: white; border-radius: 6px; font-weight: bold; cursor: pointer;">✅ Actualizar Cantidades</button>
+                    <button id="btnSaveQuick" class="btn-save" style="width: 100%; padding: 10px; background: #10b981; border: none; color: white; border-radius: 6px; font-weight: bold; cursor: pointer;">✅ Guardar Cambios</button>
                 </div>
                 
                 <button id="btnCloseModal" style="width: 100%; margin-top: 15px; background: none; border: none; color: #64748b; text-decoration: underline; cursor: pointer; font-size: 12px;">Cerrar Vista</button>
+                </div>
+
+                <!-- PANEL DERECHO: HOJA DE ESPECIFICACIONES -->
+                <div class="modal-content shadow" style="flex: 2 1 600px; max-width: 800px; padding: 2rem; border-radius: 15px; background: #fff; color: #000; font-family: Arial, sans-serif; font-size: 0.85rem; max-height: 95vh; overflow-y: auto; line-height: 1.4;">
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+                        <button id="btnDownloadSpecPDF" class="btn-primary" style="font-size: 0.8rem; padding: 8px 15px; background: #ef4444; border-radius: 8px;">📄 Descargar PDF</button>
+                    </div>
+
+                    <div id="hojaEspecificacionesContent" style="padding: 10px; background: #fff;">
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 5px; border: 1px solid #000; text-align: left; font-size: 0.8rem;">
+                        <tr>
+                            <td rowspan="5" style="border: 1px solid #000; text-align: center; font-weight: bold; width: 60%;">DIRECTIVA DE CONTROL DEL SISTEMA</td>
+                            <td style="border: 1px solid #000; padding: 2px 5px; font-weight:bold;">Código</td>
+                            <td style="border: 1px solid #000; padding: 2px 5px;">SEN-DIRS-01</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #000; padding: 2px 5px; font-weight:bold;">Versión</td>
+                            <td style="border: 1px solid #000; padding: 2px 5px;">1</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #000; padding: 2px 5px; font-weight:bold;">Aprobado</td>
+                            <td style="border: 1px solid #000; padding: 2px 5px;">DN</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #000; padding: 2px 5px; font-weight:bold;">Fecha</td>
+                            <td style="border: 1px solid #000; padding: 2px 5px;">11/5/2015</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #000; padding: 2px 5px; font-weight:bold;">Página</td>
+                            <td style="border: 1px solid #000; padding: 2px 5px;">5 al 12</td>
+                        </tr>
+                    </table>
+                    <p style="text-align: right; margin: 0 0 10px 0; font-size: 0.8rem;">Anexo 01 (anverso)</p>
+                    <h3 style="text-align: center; font-size: 0.95rem; text-decoration: underline; margin-bottom: 5px;">HOJA DE ESPECIFICACIONES DE FORMACIÓN/CAPACITACIÓN Y LISTA DE VERIFICACIÓN DE RECURSOS</h3>
+                    <p style="text-align:center; font-weight:bold; margin-bottom:15px;">HE-F/C N° <u>&nbsp;&nbsp;<span class="editable-field" contenteditable="true">1</span>&nbsp;&nbsp;</u></p>
+                    <p style="margin-bottom: 5px;"><strong>ZONAL:</strong> <span class="editable-field" contenteditable="true">LIMA CALLAO</span><br><strong>CFP:</strong> <span class="editable-field" contenteditable="true">CTTC</span></p>
+                    
+                    <p style="margin-bottom: 5px;"><strong>1.- CLIENTE</strong></p>
+                    <table style="width: 100%; font-size: 0.8rem; margin-bottom: 10px;">
+                        <tr>
+                            <td>Empresa aportante y no aportante</td><td>[ <span class="editable-field" contenteditable="true">X</span> ]</td>
+                            <td>Personas interesadas en form/cap profesional</td><td>[ <span class="editable-field" contenteditable="true">X</span> ]</td>
+                        </tr>
+                        <tr>
+                            <td>Trabajadores de empresas aportantes</td><td>[ <span class="editable-field" contenteditable="true">X</span> ]</td>
+                            <td>Trabajadores independientes</td><td>[ <span class="editable-field" contenteditable="true">&nbsp;</span> ]</td>
+                        </tr>
+                        <tr>
+                            <td>Publico en general</td><td>[ <span class="editable-field" contenteditable="true">X</span> ]</td>
+                            <td>Instituciones</td><td>[ <span class="editable-field" contenteditable="true">&nbsp;</span> ]</td>
+                        </tr>
+                    </table>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <div style="width: 48%;">
+                            <p style="margin-bottom: 3px;"><strong>2.- PROGRAMA</strong></p>
+                            <p style="margin: 0;">Formación [ <span class="editable-field" contenteditable="true">&nbsp;</span> ]<br>Capacitación [ <span class="editable-field" contenteditable="true">X</span> ]</p>
+                        </div>
+                        <div style="width: 48%;">
+                            <p style="margin-bottom: 3px;"><strong>NIVEL</strong></p>
+                            <p style="margin: 0;">Técnico operativo [ <span class="editable-field" contenteditable="true">&nbsp;</span> ]<br>Técnico medio [ <span class="editable-field" contenteditable="true">X</span> ]<br>Técnico superior [ <span class="editable-field" contenteditable="true">&nbsp;</span> ]</p>
+                        </div>
+                    </div>
+
+                    <p style="margin-bottom: 3px;"><strong>3.- CARRERA, ESPECIALIDAD / MODULO / CURSO:</strong></p>
+                    <p style="border-bottom: 1px solid #000; margin-bottom: 5px; padding-bottom: 2px;" id="hoja_curso" class="editable-field" contenteditable="true"></p>
+                    <p style="margin-bottom: 10px;">Ingreso/ grupo: <u>&nbsp;NRC <span id="hoja_nrc" class="editable-field" contenteditable="true"></span>&nbsp;</u></p>
+
+                    <p style="margin-bottom: 10px;"><strong>4.- NÚMERO DE APRENDICES / PARTICIPANTES A SER ATENDIDOS:</strong> <u>&nbsp;<span id="hoja_participantes" class="editable-field" contenteditable="true"></span>&nbsp;</u></p>
+
+                    <p style="margin-bottom: 3px;"><strong>5.- DISEÑO DE LA FORMACIÓN / CAPACITACIÓN:</strong> <span style="float:right;">SI &nbsp;&nbsp;&nbsp; NO</span></p>
+                    <p style="margin: 2px 0;">5.1. Programas de Formación: diseño de la ocupación aprobado por la Gerencia Técnica <span style="float:right;">[ <span class="editable-field" contenteditable="true">&nbsp;</span> ] &nbsp; [ <span class="editable-field" contenteditable="true">&nbsp;</span> ]</span></p>
+                    <p style="margin: 2px 0 10px 0;">5.2. Programas de Capacitación: diseño de cursos aprobados por la Gerencia Técnica <span style="float:right;">[ <span class="editable-field" contenteditable="true">X</span> ] &nbsp; [ <span class="editable-field" contenteditable="true">&nbsp;</span> ]</span></p>
+
+                    <p style="margin-bottom: 3px;"><strong>6.- DURACIÓN:</strong></p>
+                    <p style="margin: 2px 0;">6.1 Programas de Formación: Verificar que la duración establecida en el diseño aprobado, está incluida en el esquema operativo y en el catálogo de la oferta de formación y capacitación profesional o prospecto del programa ofertado, según corresponda.</p>
+                    <p style="margin: 2px 0;">6.2 Programa de Capacitación o de Formación Modular</p>
+                    <p style="margin: 2px 0;">Duración: <u>&nbsp;<span id="hoja_duracion" class="editable-field" contenteditable="true"></span>&nbsp;</u> Horas</p>
+                    <p style="margin: 2px 0;">Periódo: Del <u>&nbsp;<span id="hoja_inicio" class="editable-field" contenteditable="true"></span>&nbsp;</u> al <u>&nbsp;<span id="hoja_fin" class="editable-field" contenteditable="true"></span>&nbsp;</u> del <u>&nbsp;<span id="hoja_anio" class="editable-field" contenteditable="true"></span>&nbsp;</u></p>
+                    <p style="margin: 2px 0;">Frecuencia: <u>&nbsp;<span id="hoja_frecuencia" class="editable-field" contenteditable="true"></span>&nbsp;</u></p>
+                    <p style="margin: 2px 0;">Horario: <u>&nbsp;<span id="hoja_horario" class="editable-field" contenteditable="true"></span>&nbsp;</u></p>
+
+                    <p style="font-size: 0.7rem; border-top: 1px solid #000; padding-top: 5px; margin-top: 15px;">F01 - SEN-DIRS-01.Acápite 02. Página 01 de 02</p>
+
+                    <hr style="border: 1px dashed #ccc; margin: 20px 0;">
+
+                    <!-- REVERSO -->
+                    <p style="text-align: right; margin: 0 0 10px 0; font-size: 0.8rem;">Anexo 01 (reverso)</p>
+                    <p style="margin-bottom: 10px;"><strong>7. LISTA DE VERIFICACIÓN DE RECURSOS</strong> (En los casos de no estar conforme algunos de los recursos anotar en el campo observaciones el estado actual y el tratamiento que se da ó dará para lograr la conformidad oportunamente).</p>
+                    
+                    <p style="margin-bottom: 3px;"><strong>7.1 INFRAESTRUCTURA</strong></p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align:center; margin-bottom: 10px;" border="1">
+                        <tr>
+                            <td style="text-align:left; padding: 2px;"><strong>A) Aula</strong></td><td style="padding: 2px;"><strong>N°</strong></td><td style="padding: 2px;"><strong>Capacidad</strong></td><td style="padding: 2px;"><strong>Conforme</strong></td><td style="padding: 2px;"><strong>No conforme</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="text-align:left; padding: 2px;" class="editable-field" contenteditable="true">Virtual</td><td style="padding: 2px;" class="editable-field" contenteditable="true">1</td><td style="padding: 2px;" id="hoja_aula_cap" class="editable-field" contenteditable="true">15</td><td style="padding: 2px;" class="editable-field" contenteditable="true">X</td><td style="padding: 2px;" class="editable-field" contenteditable="true"></td>
+                        </tr>
+                    </table>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align:center; margin-bottom: 10px;" border="1">
+                        <tr>
+                            <td style="text-align:left; padding: 2px;"><strong>B) Taller / laboratorio</strong></td><td style="padding: 2px;"><strong>Conforme</strong></td><td style="padding: 2px;"><strong>No conforme</strong></td>
+                        </tr>
+                        <tr><td style="text-align:left; padding: 2px;">Puestos de trabajo disponible</td><td style="padding: 2px;" class="editable-field" contenteditable="true"></td><td style="padding: 2px;" class="editable-field" contenteditable="true"></td></tr>
+                        <tr><td style="text-align:left; padding: 2px;">Equipamiento: Maquinas, Equipos, Instrumentos, Herramientas</td><td style="padding: 2px;" class="editable-field" contenteditable="true"></td><td style="padding: 2px;" class="editable-field" contenteditable="true"></td></tr>
+                    </table>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align:center; margin-bottom: 10px;" border="1">
+                        <tr>
+                            <td style="text-align:left; padding: 2px;"><strong>C) Servicios complementarios</strong></td><td style="padding: 2px;"><strong>Conforme</strong></td><td style="padding: 2px;"><strong>No conforme</strong></td>
+                        </tr>
+                        <tr><td style="text-align:left; padding: 2px;">Energía eléctrica, Iluminación, Agua, SSHH</td><td style="padding: 2px;" class="editable-field" contenteditable="true">X</td><td style="padding: 2px;" class="editable-field" contenteditable="true"></td></tr>
+                    </table>
+                    
+                    <p style="margin-bottom: 10px;"><strong>OBSERVACIONES:</strong> <u class="editable-field" contenteditable="true">El curso es dictado en formato online</u></p>
+
+                    <p style="margin-bottom: 3px;"><strong>7.2. MATERIALES Y MEDIOS EDUCATIVOS</strong></p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align:center; margin-bottom: 10px;" border="1">
+                        <tr>
+                            <td style="text-align:left; padding: 2px;">A) Materiales de practica</td><td style="width: 20%; padding: 2px;"><strong>Conforme</strong></td><td style="width: 20%; padding: 2px;"><strong>No conforme</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="text-align:left; padding: 2px;">B) Medios didacticos</td><td style="padding: 2px;" class="editable-field" contenteditable="true">X</td><td style="padding: 2px;" class="editable-field" contenteditable="true"></td>
+                        </tr>
+                        <tr>
+                            <td style="text-align:left; padding: 2px;">C) Material didactico escrito</td><td style="padding: 2px;" class="editable-field" contenteditable="true"></td><td style="padding: 2px;" class="editable-field" contenteditable="true"></td>
+                        </tr>
+                    </table>
+
+                    <p style="margin-bottom: 3px;"><strong>7.3. PERSONAL DE INSTRUCCIÓN</strong></p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align:center; margin-bottom: 10px;" border="1">
+                        <tr>
+                            <td style="text-align:left; padding: 2px;">Disponibilidad de instructores</td><td style="padding: 2px;"><strong>Conforme</strong></td><td style="padding: 2px;"><strong>No conforme</strong></td><td style="padding: 2px;"><strong>Nombre</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="text-align:left; padding: 2px;">A) Instructor de la Formación /Capacitación</td><td style="padding: 2px;" class="editable-field" contenteditable="true">X</td><td style="padding: 2px;" class="editable-field" contenteditable="true"></td><td style="padding: 2px;" id="hoja_docente" class="editable-field" contenteditable="true"></td>
+                        </tr>
+                    </table>
+
+                    <p style="margin-bottom: 20px;"><strong>OBSERVACIONES:</strong> <span class="editable-field" contenteditable="true">___________________________________________________</span></p>
+
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: flex-end;">
+                        <div style="text-align: center;">
+                            <p class="hoja_hoy" style="border-bottom: 1px solid #000; padding: 0 10px; margin:0 0 5px 0; display: inline-block;"></p><br>
+                            <p style="margin:0;">Lugar y fecha</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <p class="editable-field" contenteditable="true" style="border-bottom: 1px solid #000; padding: 0 10px; margin:0 0 5px 0; display: inline-block; min-width: 150px;">Gustavo Fernández</p><br>
+                            <p style="margin:0;">Nombre y firma del elaborador</p>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 10px;">
+                        <p style="margin: 5px 0;">Nombre y Firma del Responsable de la Verificación: <u class="editable-field" contenteditable="true">Jean Rodriguez</u></p>
+                        <p style="margin: 5px 0;">Fecha: <u class="hoja_hoy"></u></p>
+                    </div>
+
+                    <p style="font-size: 0.7rem; border-top: 1px solid #000; padding-top: 5px; margin-top: 15px;">F01 - SEN-DIRS-01.Acápite 02. Página 02 de 02</p>
+
+                    <!-- CHECKLIST DE CONTROL ADICIONAL -->
+                    <div class="html2pdf__page-break"></div>
+                    <div style="margin-top: 20px; padding-top: 10px;">
+                        <h3 style="font-size: 1rem; background: #f1f5f9; padding: 10px; border: 1px solid #cbd5e1; margin-bottom: 15px; color: #0f172a;">✅ CHECKLIST DE CONTROL: <span id="checklist_title" class="editable-field" contenteditable="true"></span></h3>
+                        
+                        <p style="font-weight: bold; margin-bottom: 5px; color: #0054a6;">I. PREPARACIÓN (15-7 días antes)</p>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 5px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Programación: Validar fechas e instructor en SSASECT (Web Académica).</span></label>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 5px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Recursos: Confirmar Aula, Laboratorio o si es Virtual.</span></label>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 5px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Software: Verificar instalación de Audaces, WGSN, Browzwear o afines.</span></label>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 15px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Quórum: Validar rango de alumnos (Min. 15 / Máx. 30).</span></label>
+
+                        <p style="font-weight: bold; margin-bottom: 5px; color: #0054a6;">II. MATRÍCULA Y ACCESOS (7-3 días antes)</p>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 5px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Banner9: Realizar matrícula y validar proceso completo.</span></label>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 5px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Blackboard: Confirmar con el docente que el curso es visible en su plataforma.</span></label>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 15px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Cruce de Horarios: Verificar que el docente no tenga traslape con el módulo anterior</span></label>
+
+                        <p style="font-weight: bold; margin-bottom: 5px; color: #0054a6;">III. COMUNICACIÓN (3 días antes)</p>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 5px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Aviso Alumnos: Enviar recordatorio de inicio.</span></label>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 15px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Aviso Docente: Enviar recordatorio de inicio.</span></label>
+
+                        <p style="font-weight: bold; margin-bottom: 5px; color: #0054a6;">IV. DOCUMENTACIÓN Y CIERRE DE INICIO</p>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 5px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Formatos: Completar Hoja de Especificación y Lista de Verificación.</span></label>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 15px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Evidencia: Subir capturas (JPG) del curso iniciado al Drive.</span></label>
+
+                        <p style="font-weight: bold; margin-bottom: 5px; color: #0054a6;">V. SEGUIMIENTO (Durante el curso)</p>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 5px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Asistencia: Ejecutar seguimiento de alumnos ausentes.</span></label>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 5px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Formatos Instructor: Revisar registro de clase presencial.</span></label>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 5px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Incidentes: Registrar inconvenientes o reportar CUSU si aplica.</span></label>
+                        <label style="display: flex; align-items: flex-start; margin-bottom: 15px;"><input type="checkbox" style="margin-top: 3px; margin-right: 8px;"> <span class="editable-field" contenteditable="true">Soporte: Atención personalizada y agendar Teams si se requiere.</span></label>
+                    </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -166,5 +359,6 @@
         </div>
     </div>
     <script type="module" src="app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </body>
 </html>
