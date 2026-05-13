@@ -3755,18 +3755,41 @@ function checkTeacherConflicts(docenteName) {
             </div>
         </div>
 
-        <h3 style="font-size: 0.95rem; color: #1e293b; margin-bottom: 10px;">Análisis Detallado de Conflictos</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="font-size: 0.95rem; color: #1e293b; margin: 0;">Análisis Detallado de Conflictos</h3>
+            <button onclick="generateTeacherGantt('${docenteName}')" class="btn-primary" style="font-size: 0.8rem; padding: 6px 12px; background: #8b5cf6; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">📊 Generar Gráfico Gantt</button>
+        </div>
+        <div id="teacherGanttContainer"></div>
         <div class="table-container" style="margin-top:10px; overflow-x:auto;">
             <table class="report-table" style="min-width: 800px;">
                 <thead>
                     <tr>
-                        <th>Programa / Módulo</th>
-                        <th>Periodo</th>
-                        <th>Horario Detallado</th>
-                        <th>Estado</th>
+                        <th>
+                            Programa / Módulo<br>
+                            <input type="text" id="filterConflictPrograma" placeholder="Filtrar programa..." style="margin-top: 4px; padding: 4px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #cbd5e1; width: 100%; box-sizing: border-box; font-weight: normal;" onkeyup="filterConflictTable()">
+                        </th>
+                        <th>
+                            Periodo (Desde - Hasta)<br>
+                            <div style="display: flex; gap: 4px; margin-top: 4px;">
+                                <input type="date" id="filterConflictFechaInicio" style="padding: 4px; font-size: 0.70rem; border-radius: 4px; border: 1px solid #cbd5e1; flex: 1; box-sizing: border-box; font-weight: normal;" onchange="filterConflictTable()" title="Fecha Desde">
+                                <input type="date" id="filterConflictFechaFin" style="padding: 4px; font-size: 0.70rem; border-radius: 4px; border: 1px solid #cbd5e1; flex: 1; box-sizing: border-box; font-weight: normal;" onchange="filterConflictTable()" title="Fecha Hasta">
+                            </div>
+                        </th>
+                        <th>
+                            Horario Detallado<br>
+                            <input type="text" id="filterConflictHorario" placeholder="Filtrar horario..." style="margin-top: 4px; padding: 4px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #cbd5e1; width: 100%; box-sizing: border-box; font-weight: normal;" onkeyup="filterConflictTable()">
+                        </th>
+                        <th>
+                            Estado<br>
+                            <select id="filterConflictEstado" style="margin-top: 4px; padding: 4px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #cbd5e1; width: 100%; box-sizing: border-box; font-weight: normal;" onchange="filterConflictTable()">
+                                <option value="">Todos</option>
+                                <option value="ok">OK</option>
+                                <option value="cruce">Cruce detectado</option>
+                            </select>
+                        </th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="conflictTableBody">
     `;
 
     // 4. BUCLE DE DETECCIÓN DE CONFLICTOS (Tu lógica original)
@@ -3792,13 +3815,13 @@ function checkTeacherConflicts(docenteName) {
 
         html += `
             <tr style="${hasConflict ? 'background:#fff1f2;' : ''}">
-                <td>
+                <td class="col-conflict-programa">
                     <strong>${docA["MODULO-CURSO"] || docA["PROGRAMA"]}</strong><br>
                     <small style="color:#64748b;">NRC: ${docA.NRC || '--'}</small>
                 </td>
-                <td>${docA["Fecha de inicio"]} al ${docA["Fecha de fin"]}</td>
-                <td style="font-size:0.8rem;">${docA.Horario || '--'}</td>
-                <td>
+                <td class="col-conflict-periodo" data-inicio="${docA["Fecha de inicio"]}" data-fin="${docA["Fecha de fin"]}">${docA["Fecha de inicio"]} al ${docA["Fecha de fin"]}</td>
+                <td class="col-conflict-horario" style="font-size:0.8rem;">${docA.Horario || '--'}</td>
+                <td class="col-conflict-estado">
                     ${hasConflict 
                         ? `<span style="color:#e11d48; font-weight:bold;">⚠️ CRUCE DETECTADO</span><br><small style="color:#e11d48;">${conflictDetails.join('<br>')}</small>` 
                         : '<span style="color:#10b981; font-weight:bold;">✅ OK</span>'}
@@ -3833,3 +3856,269 @@ function checkScheduleOverlap(schedA, schedB) {
     }
     return null;
 }
+
+window.generateTeacherGantt = (docenteName) => {
+    const container = document.getElementById('teacherGanttContainer');
+    if (!container) return;
+
+    const allDocs = window.lastDashboardDocs || [];
+    const teacherDocs = allDocs.filter(d => (d.Docente || "").includes(docenteName));
+
+    if (teacherDocs.length === 0) {
+        container.innerHTML = '<p style="color:#64748b; font-size:0.85rem; padding: 10px;">No hay datos para graficar.</p>';
+        return;
+    }
+
+    const valProg = (document.getElementById('filterConflictPrograma')?.value || '').toLowerCase();
+    const valFInicio = document.getElementById('filterConflictFechaInicio')?.value;
+    const valFFin = document.getElementById('filterConflictFechaFin')?.value;
+    const valHor = (document.getElementById('filterConflictHorario')?.value || '').toLowerCase();
+    const valEst = (document.getElementById('filterConflictEstado')?.value || '').toLowerCase();
+
+    let minDate = new Date("2099-12-31");
+    let maxDate = new Date("2000-01-01");
+    const validDocs = [];
+
+    teacherDocs.forEach((docA, i) => {
+        if(docA["Fecha de inicio"] && docA["Fecha de fin"]) {
+            const start = new Date(docA["Fecha de inicio"] + "T00:00:00");
+            const end = new Date(docA["Fecha de fin"] + "T00:00:00");
+            if (start < minDate) minDate = start;
+            if (end > maxDate) maxDate = end;
+            
+            let hasConflict = false;
+            let conflictDetailsList = [];
+            const scheduleA = parseHorario(docA.Horario);
+            for (let j = 0; j < teacherDocs.length; j++) {
+                if (i === j) continue;
+                const docB = teacherDocs[j];
+                if (datesOverlap(docA["Fecha de inicio"], docA["Fecha de fin"], docB["Fecha de inicio"], docB["Fecha de fin"])) {
+                    const scheduleB = parseHorario(docB.Horario);
+                    const overlapDetail = checkScheduleOverlap(scheduleA, scheduleB);
+                    if (overlapDetail) {
+                        hasConflict = true;
+                        conflictDetailsList.push(`• ${docB["MODULO-CURSO"] || docB["PROGRAMA"]}\n  NRC: ${docB.NRC || '--'}\n  Horario: ${docB.Horario}\n  Detalle: ${overlapDetail}`);
+                    }
+                }
+            }
+
+            const prog = (docA["MODULO-CURSO"] || docA["PROGRAMA"] || '').toLowerCase();
+            const hor = (docA.Horario || '').toLowerCase();
+            const est = hasConflict ? 'cruce' : 'ok';
+            const rowInicio = docA["Fecha de inicio"];
+            const rowFin = docA["Fecha de fin"];
+
+            let match = true;
+            if (valProg && !prog.includes(valProg)) match = false;
+            if (valHor && !hor.includes(valHor)) match = false;
+            if (valEst) {
+                if (valEst === 'ok' && est !== 'ok') match = false;
+                if (valEst === 'cruce' && est !== 'cruce') match = false;
+            }
+            if (valFInicio && rowFin && rowFin < valFInicio) match = false;
+            if (valFFin && rowInicio && rowInicio > valFFin) match = false;
+
+            if (match) {
+                if (start < minDate) minDate = start;
+                if (end > maxDate) maxDate = end;
+                
+                validDocs.push({
+                    nombre: docA["MODULO-CURSO"] || docA["PROGRAMA"],
+                    inicio: docA["Fecha de inicio"],
+                    fin: docA["Fecha de fin"],
+                    startObj: start,
+                    endObj: end,
+                    conflict: hasConflict,
+                    conflictDetails: conflictDetailsList,
+                    horario: docA.Horario || 'Sin horario',
+                    nrc: docA.NRC || '--'
+                });
+            }
+        }
+    });
+
+    if (validDocs.length === 0) {
+        container.innerHTML = '<p style="color:#64748b; font-size:0.85rem; padding: 10px;">Los cursos carecen de fechas válidas para armar el diagrama o no coinciden con los filtros aplicados.</p>';
+        return;
+    }
+
+    validDocs.sort((a, b) => a.startObj - b.startObj);
+    const totalDays = Math.round((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
+    const timelineWidth = Math.max(600, totalDays * 25); // Al menos 25px por día
+    
+    // --- LÓGICA DE AGRUPACIÓN POR MESES ---
+    const months = [];
+    let currentMonthStr = "";
+    let currentMonthStart = 0;
+    
+    for(let d = 0; d < totalDays; d++) {
+        const currentD = new Date(minDate.getTime() + d * 24 * 60 * 60 * 1000);
+        const monthName = currentD.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase();
+        if (monthName !== currentMonthStr) {
+            if (currentMonthStr !== "") {
+                months.push({ name: currentMonthStr, start: currentMonthStart, length: d - currentMonthStart });
+            }
+            currentMonthStr = monthName;
+            currentMonthStart = d;
+        }
+    }
+    if (currentMonthStr !== "") {
+        months.push({ name: currentMonthStr, start: currentMonthStart, length: totalDays - currentMonthStart });
+    }
+
+    let html = `
+        <div style="margin-top: 15px; margin-bottom: 25px; background: #f8fafc; padding: 20px 0; border-radius: 8px; border: 1px dashed #cbd5e1; overflow-x: auto; position: relative;">
+            <div style="min-width: ${320 + timelineWidth}px; position: relative; z-index: 1; padding: 0 20px;">
+                
+                <!-- Encabezado de Meses y Días -->
+                <div style="display: flex; margin-bottom: 10px; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px;">
+                    <div class="sticky-col-header" style="width: 320px; min-width: 320px; font-size: 0.75rem; font-weight: 700; color: #475569; display: flex; align-items: flex-end; position: sticky; left: 20px; background: #f8fafc; z-index: 11; padding-bottom: 5px; border-right: 1px solid #cbd5e1; padding-right: 15px;">Programa / Módulo</div>
+                    <div style="flex: 1; position: relative; height: 45px;">
+    `;
+
+    months.forEach(m => {
+        const leftPerc = (m.start / totalDays) * 100;
+        const widthPerc = (m.length / totalDays) * 100;
+        html += `
+                        <div style="position: absolute; left: ${leftPerc}%; top: 0; width: ${widthPerc}%; height: 15px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #cbd5e1; border-left: 1px solid #cbd5e1; background: #e2e8f0; font-size: 0.65rem; font-weight: bold; color: #475569; box-sizing: border-box; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-radius: 4px 4px 0 0;">
+                            ${m.name}
+                        </div>
+        `;
+    });
+
+    for(let d = 0; d < totalDays; d++) {
+        const currentD = new Date(minDate.getTime() + d * 24 * 60 * 60 * 1000);
+        const dayStr = currentD.toLocaleDateString('es-ES', { weekday: 'short' }).substring(0, 2).toUpperCase(); 
+        const dateStr = currentD.getDate();
+        const leftPerc = (d / totalDays) * 100;
+        const isWeekend = currentD.getDay() === 0 || currentD.getDay() === 6;
+        const color = isWeekend ? '#ef4444' : '#334155';
+        
+        html += `
+                        <div style="position: absolute; left: ${leftPerc}%; top: 15px; width: ${100/totalDays}%; height: 30px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
+                            <span style="font-size: 0.55rem; color: #94a3b8;">${dayStr}</span>
+                            <span style="font-size: 0.7rem; font-weight: bold; color: ${color};">${dateStr}</span>
+                        </div>
+        `;
+    }
+    html += `               </div>
+                </div>
+    `;
+    
+    validDocs.forEach((doc) => {
+        const leftDays = Math.round((doc.startObj - minDate) / (1000 * 60 * 60 * 24));
+        const durationDays = Math.round((doc.endObj - doc.startObj) / (1000 * 60 * 60 * 24)) + 1;
+        
+        const bgColor = doc.conflict ? '#ef4444' : '#10b981'; 
+        const borderColor = doc.conflict ? '#b91c1c' : '#059669';
+
+        const parsedSched = parseHorario(doc.horario);
+        const activeDaysAbrev = new Set();
+        parsedSched.forEach(b => b.days.forEach(d => activeDaysAbrev.add(d)));
+        const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+        let boxesHtml = '';
+        for (let dayOffset = 0; dayOffset < durationDays; dayOffset++) {
+            const currentD = new Date(doc.startObj.getTime() + dayOffset * 24 * 60 * 60 * 1000);
+            const iso = currentD.toISOString().split('T')[0];
+            const dayAbrev = diasSemana[currentD.getDay()];
+            
+            if (activeDaysAbrev.has(dayAbrev) && !FERIADOS_2026.includes(iso)) {
+                const globalDayOffset = leftDays + dayOffset;
+                const leftPerc = (globalDayOffset / totalDays) * 100;
+                const widthPerc = (1 / totalDays) * 100;
+                
+                let tooltipConflict = doc.conflict ? `\n\n⚠️ CRUCE CON:\n${doc.conflictDetails.join('\n\n')}` : '';
+
+                boxesHtml += `
+                    <div style="position: absolute; left: ${leftPerc}%; width: ${widthPerc}%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 2px; box-sizing: border-box;" title="${doc.nombre}\nInicio: ${doc.inicio}\nFin: ${doc.fin}\n${doc.horario}\nDía: ${iso}${tooltipConflict}">
+                        <div style="width: 100%; height: 100%; background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.6rem; font-weight: bold; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            ${doc.conflict ? '⚠️' : '✅'}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        html += `
+            <div style="display: flex; align-items: center; margin-bottom: 12px; transition: background 0.2s; padding: 0; border-radius: 4px; position: relative; z-index: 1;" onmouseover="this.style.background='#f1f5f9'; this.querySelector('.sticky-col').style.background='#f1f5f9';" onmouseout="this.style.background='transparent'; this.querySelector('.sticky-col').style.background='#f8fafc';">
+                <div class="sticky-col" style="width: 320px; min-width: 320px; font-size: 0.75rem; color: #334155; white-space: normal; padding: 4px 15px 4px 0; position: sticky; left: 20px; background: #f8fafc; z-index: 10; border-right: 1px solid #cbd5e1; box-shadow: 2px 0 4px rgba(0,0,0,0.05); transition: background 0.2s;">
+                    <strong>${doc.nombre}</strong><br>
+                    <span style="color: #64748b; font-size: 0.7rem;"><strong>NRC:</strong> ${doc.nrc}<br><strong>Horario:</strong> ${doc.horario}</span>
+                </div>
+                <div style="flex: 1; position: relative; height: 32px; background: transparent; border-radius: 6px;">
+                    ${boxesHtml}
+                </div>
+            </div>
+        `;
+    });
+
+    html += `
+                <!-- Cuadrícula de Fondo -->
+                <div style="position: absolute; top: 55px; bottom: 0; left: 340px; right: 20px; pointer-events: none; z-index: 0; display: flex;">
+    `;
+    for(let d = 0; d < totalDays; d++) {
+        const currentD = new Date(minDate.getTime() + d * 24 * 60 * 60 * 1000);
+        const isWeekend = currentD.getDay() === 0 || currentD.getDay() === 6;
+        const bgColor = isWeekend ? 'rgba(226, 232, 240, 0.4)' : 'transparent';
+        
+        html += `
+                    <div style="flex: 1; border-left: 1px dashed #cbd5e1; background: ${bgColor}; height: 100%; box-sizing: border-box;"></div>
+        `;
+    }
+    html += `
+                </div>
+        </div>
+        <div style="margin-top: 15px; font-size: 0.8rem; display: flex; gap: 20px; justify-content: center;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 16px; height: 16px; background: #10b981; border: 1px solid #059669; border-radius: 4px;"></div> <span style="color:#334155; font-weight:600;">Disponible (OK)</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 16px; height: 16px; background: #ef4444; border: 1px solid #b91c1c; border-radius: 4px;"></div> <span style="color:#334155; font-weight:600;">Cruce Detectado</span>
+            </div>
+        </div>
+    </div>`;
+
+    container.innerHTML = html;
+};
+
+window.filterConflictTable = () => {
+    const valProg = (document.getElementById('filterConflictPrograma')?.value || '').toLowerCase();
+    const valFInicio = document.getElementById('filterConflictFechaInicio')?.value;
+    const valFFin = document.getElementById('filterConflictFechaFin')?.value;
+    const valHor = (document.getElementById('filterConflictHorario')?.value || '').toLowerCase();
+    const valEst = (document.getElementById('filterConflictEstado')?.value || '').toLowerCase();
+
+    const tbody = document.getElementById('conflictTableBody');
+    if (!tbody) return;
+
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach(row => {
+        const prog = (row.querySelector('.col-conflict-programa')?.textContent || '').toLowerCase();
+        const hor = (row.querySelector('.col-conflict-horario')?.textContent || '').toLowerCase();
+        const est = (row.querySelector('.col-conflict-estado')?.textContent || '').toLowerCase();
+
+        const tdPeriodo = row.querySelector('.col-conflict-periodo');
+        const rowInicio = tdPeriodo?.getAttribute('data-inicio');
+        const rowFin = tdPeriodo?.getAttribute('data-fin');
+
+        let match = true;
+        if (valProg && !prog.includes(valProg)) match = false;
+        if (valHor && !hor.includes(valHor)) match = false;
+        if (valEst) {
+            if (valEst === 'ok' && !est.includes('ok')) match = false;
+            if (valEst === 'cruce' && !est.includes('cruce')) match = false;
+        }
+
+        if (valFInicio && rowFin && rowFin < valFInicio) match = false;
+        if (valFFin && rowInicio && rowInicio > valFFin) match = false;
+
+        row.style.display = match ? '' : 'none';
+    });
+
+    const docenteName = document.getElementById('conflictDocenteSelector')?.value;
+    const ganttContainer = document.getElementById('teacherGanttContainer');
+    if (docenteName && ganttContainer && ganttContainer.innerHTML.trim() !== '') {
+        generateTeacherGantt(docenteName);
+    }
+};
