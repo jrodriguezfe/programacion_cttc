@@ -49,6 +49,7 @@ let userLogged = null;
 let lastSnapshotData = [];
 let sortDateAsc = true; // Control de orden ascendente/descendente de fecha
 let defaultHojaHTML = null; // Plantilla base para Hoja de Especificaciones
+let currentFilteredData = []; // Guardará el resultado de los filtros aplicados
 
 let selectedEmpresas = []; // Almacena las empresas marcadas
 
@@ -129,6 +130,8 @@ function renderFromData(rawData) {
 
             return true;
         });
+
+        currentFilteredData = filtered; // Guardamos en la variable global para exportar luego
 
         // 2. Actualización de UI y opciones de filtros
         window.proximosIds = filtered.slice(0, 3).map(d => d.id);
@@ -600,12 +603,38 @@ document.getElementById('btnCopyNrcModal').onclick = () => {
     });
 };
 
-// Al final de app.js, junto a los otros eventos
-document.getElementById('empresaFilter').onchange = (e) => { 
-    currentEmpresa = e.target.value; 
-    renderFromData(lastSnapshotData); 
-};
+// --- EVENTO PARA EXPORTAR VISTA PÚBLICA A EXCEL ---
+const btnExportPublicExcel = document.getElementById('btnExportPublicExcel');
+if (btnExportPublicExcel) {
+    btnExportPublicExcel.onclick = () => {
+        if (typeof XLSX === 'undefined') {
+            alert("La librería de Excel está cargando. Espere un momento.");
+            return;
+        }
+        if (!currentFilteredData || currentFilteredData.length === 0) {
+            alert("No hay datos para exportar con los filtros actuales.");
+            return;
+        }
+        
+        // Mapeamos los datos al formato que se visualizará en el Excel
+        const dataToExport = currentFilteredData.map(d => ({
+            "Fecha de Inicio": d["Fecha de inicio"] || "",
+            "Programa": d["PROGRAMA"] || "CURSO INDEP.",
+            "Módulo / Curso": d["MODULO-CURSO"] || d["PROGRAMA"] || "",
+            "Docente": d["Docente"] || "",
+            "Duración (hrs)": d["Duracion"] || d["Duración"] || 0,
+            "Horario": d["Horario"] || "",
+            "NRC": d["NRC"] || "",
+            "Part. Objetivo": d["#Participantes Objetivo"] || 0,
+            "Part. Real": d["#Participantes Real Total"] || 0
+        }));
 
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Datos Filtrados");
+        XLSX.writeFile(wb, "Programacion_Academica_Filtrada.xlsx");
+    };
+}
 
 // Cerrar modal al clickear fuera
 window.onclick = (e) => {

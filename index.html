@@ -16,9 +16,12 @@
 
         <main class="main-content">
             <header class="section-header">
-                <div class="title-group">
-                    <h1>Programación Académica 2026</h1>
-                    <p class="subtitle">Consulta de cursos y programas en tiempo real</p>
+                <div class="title-group" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div>
+                        <h1>Programación Académica 2026</h1>
+                        <p class="subtitle">Consulta de cursos y programas en tiempo real</p>
+                    </div>
+                    <button id="btnExportPublicExcel" class="btn-primary" style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; padding: 8px 16px;">📥 Exportar Excel</button>
                 </div>
                 
                 <div class="controls-wrapper">
@@ -358,6 +361,7 @@
             </div>
         </div>
     </div>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <script type="module" src="app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </body>
