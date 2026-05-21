@@ -4122,3 +4122,114 @@ window.filterConflictTable = () => {
         generateTeacherGantt(docenteName);
     }
 };
+
+// --- EXPORTAR CATÁLOGO DE CAPACITACIONES A WORD ---
+const btnExportCatalogWord = document.getElementById('btnExportCatalogWord');
+if (btnExportCatalogWord) {
+    btnExportCatalogWord.onclick = () => {
+        const docs = window.lastDashboardDocs || [];
+        if (docs.length === 0) {
+            alert("No hay datos para exportar al catálogo.");
+            return;
+        }
+
+        // 1. Separar Módulos (para agrupar en programas) y Cursos Independientes
+        const modules = docs.filter(d => d.TIPO === "MÓDULO");
+        const courses = docs.filter(d => d.TIPO !== "MÓDULO").sort((a, b) => (a["Fecha de inicio"] || "").localeCompare(b["Fecha de inicio"] || ""));
+
+        const progMap = {};
+        modules.forEach(m => {
+            const prog = m.PROGRAMA || 'Sin Programa';
+            if (!progMap[prog]) progMap[prog] = [];
+            progMap[prog].push(m);
+        });
+
+        // 2. Construir contenido HTML (Estilos compatibles con MS Word)
+        let content = "";
+        Object.keys(progMap).sort().forEach(progName => {
+            const mods = progMap[progName].sort((a, b) => (parseInt(a["Modulo Orden"]) || 0) - (parseInt(b["Modulo Orden"]) || 0));
+            
+            content += `<h2 style="color: #0054a6; font-size: 16pt; margin-top: 25px; font-family: Arial, sans-serif; border-bottom: 2px solid #0ea5e9; padding-bottom: 5px;">PROGRAMA: ${progName}</h2>`;
+            content += `<table border="1" cellpadding="8" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-family: Arial, sans-serif; font-size: 10pt; border: 1px solid #cbd5e1;">
+                <thead>
+                    <tr style="background-color: #f1f5f9; color: #1e293b;">
+                        <th style="text-align: left; width: 30%;">Módulo / Curso</th>
+                        <th style="text-align: center; width: 10%;">Modalidad</th>
+                        <th style="text-align: center; width: 10%;">Duración</th>
+                        <th style="text-align: left; width: 20%;">Horario</th>
+                        <th style="text-align: center; width: 15%;">Fechas</th>
+                        <th style="text-align: left; width: 15%;">Docente</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            
+            mods.forEach(m => {
+                content += `<tr>
+                    <td><strong>${m["Modulo Orden"] ? `Mód. ${m["Modulo Orden"]}: ` : ''}</strong>${m["MODULO-CURSO"]}</td>
+                    <td style="text-align: center;">${m["MODALIDAD MÓDULO"] || m["MODALIDAD PROGRAMA"] || '-'}</td>
+                    <td style="text-align: center;">${m["Duracion"] || m["Duración"] || '-'} hrs</td>
+                    <td>${m.Horario || '-'}</td>
+                    <td style="text-align: center;">${m["Fecha de inicio"] || '-'} <br>al<br> ${m["Fecha de fin"] || '-'}</td>
+                    <td>${m.Docente || '-'}</td>
+                </tr>`;
+            });
+            content += `</tbody></table>`;
+        });
+
+        if (courses.length > 0) {
+            content += `<h2 style="color: #10b981; font-size: 16pt; margin-top: 25px; font-family: Arial, sans-serif; border-bottom: 2px solid #10b981; padding-bottom: 5px;">CURSOS INDEPENDIENTES</h2>`;
+            content += `<table border="1" cellpadding="8" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-family: Arial, sans-serif; font-size: 10pt; border: 1px solid #cbd5e1;">
+                <thead>
+                    <tr style="background-color: #f1f5f9; color: #1e293b;">
+                        <th style="text-align: left; width: 30%;">Curso</th>
+                        <th style="text-align: center; width: 10%;">Modalidad</th>
+                        <th style="text-align: center; width: 10%;">Duración</th>
+                        <th style="text-align: left; width: 20%;">Horario</th>
+                        <th style="text-align: center; width: 15%;">Fechas</th>
+                        <th style="text-align: left; width: 15%;">Docente</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            courses.forEach(c => {
+                content += `<tr>
+                    <td><strong>${c.PROGRAMA || c["MODULO-CURSO"] || '-'}</strong></td>
+                    <td style="text-align: center;">${c["MODALIDAD MÓDULO"] || c["MODALIDAD PROGRAMA"] || '-'}</td>
+                    <td style="text-align: center;">${c["Duracion"] || c["Duración"] || '-'} hrs</td>
+                    <td>${c.Horario || '-'}</td>
+                    <td style="text-align: center;">${c["Fecha de inicio"] || '-'} <br>al<br> ${c["Fecha de fin"] || '-'}</td>
+                    <td>${c.Docente || '-'}</td>
+                </tr>`;
+            });
+            content += `</tbody></table>`;
+        }
+
+        // 3. Encabezados XML necesarios para que MS Word lo reconozca
+        const fullHtml = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head>
+                <meta charset='utf-8'>
+                <title>Catálogo de Capacitaciones CTTC</title>
+            </head>
+            <body style="font-family: Arial, sans-serif;">
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <h1 style="color: #0054a6; font-size: 24pt; margin-bottom: 5px; font-family: Arial, sans-serif;">CATÁLOGO DE CAPACITACIONES</h1>
+                    <p style="color: #64748b; font-size: 14pt; font-family: Arial, sans-serif;">CTTC SENATI - Programación Académica ${new Date().getFullYear()}</p>
+                    <hr style="border: 0; border-bottom: 2px solid #10b981; margin-top: 15px; margin-bottom: 25px;">
+                </div>
+                ${content}
+            </body>
+            </html>
+        `;
+        
+        // 4. Descargar usando un Blob formato MSWord
+        const blob = new Blob(['\ufeff', fullHtml], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Catalogo_CTTC_${new Date().getFullYear()}.doc`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+}
