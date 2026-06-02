@@ -15,24 +15,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const colRef = collection(db, "programaciones");
+const teachersColRef = collection(db, "docentes");
 
-const DOCENTE_IDS = {
-    "ANDRES CCOCA": "000310149",
-    "CARMELON GONZALES": "1140234",
-    "JONATAN BEGAZO": "000872470",
-    "JORGE CAYCHO": "001489131",
-    "LUIS QUELOPANA": "000275632",
-    "MARCO POLO": "419010",
-    "MARIA PEREZ": "000508547",
-    "MARTA LAURA": "001108028",
-    "MARTHA MAYTA": "001470313",
-    "NANCY PACHECO": "000908855",
-    "RICARDO MORENO": "001404715",
-    "ROBERT CALDERON": "000070025",
-    "VICTOR HUAMANÍ": "000697786",
-    "VICTOR GASTAÑETA": "001514007"
-};
-
+let teacherIdMap = {};
 // Configuración de campos
 const CAMPOS_MODAL = ["Part_Programa", "Part_Curso", "Part_Beca", "Part_Pago_Programa", "Part_Pago_Curso"];
 
@@ -65,6 +50,19 @@ onAuthStateChanged(auth, (user) => {
     loadData(); 
 });
 
+// Cargar docentes dinámicamente
+onSnapshot(query(teachersColRef), (snapshot) => {
+    const newMap = {};
+    snapshot.docs.forEach(doc => {
+        const teacher = doc.data();
+        if (teacher.nombre && teacher.dni) {
+            newMap[teacher.nombre.toUpperCase()] = teacher.dni;
+        }
+    });
+    teacherIdMap = newMap;
+    // Re-render data if it's already loaded to update any potential teacher info
+    if (lastSnapshotData.length > 0) renderFromData(lastSnapshotData);
+});
 // --- GESTIÓN DE DATOS ---
 function loadData() {
     const q = query(colRef, orderBy("Fecha de inicio", "asc"));
@@ -270,10 +268,17 @@ window.showNrcDetails = (id) => {
     if (!d) return;
     
     const docenteRaw = d.Docente || '';
-    const ids = docenteRaw.split(',')
-        .map(name => name.trim())
-        .map(name => DOCENTE_IDS[name] || 'N/A')
-        .join(', ');
+    const dnisRaw = d.Docente_DNI || '';
+    
+    let ids = 'N/A';
+    if (dnisRaw) {
+        ids = dnisRaw;
+    } else {
+        ids = docenteRaw.split(',')
+            .map(name => name.trim().toUpperCase())
+            .map(name => teacherIdMap[name] || 'N/A')
+            .join(', ');
+    }
 
     const msg = `📋 DATOS TÉCNICOS NRC\n\n` +
                 `• NRC SEMILLA: ${d["NRC Semilla"] || '---'}\n` +

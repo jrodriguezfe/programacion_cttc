@@ -112,6 +112,47 @@
                 </div>
             </section>
 
+            <!-- SECCIÓN NUEVA: GESTIÓN DE DOCENTES -->
+            <section id="teacherManagementSection" class="form-container shadow" style="margin-top: 30px;">
+                <header class="section-header-collapsible" onclick="toggleSection(this)">
+                    <div>
+                        <h2>Gestión de Docentes</h2>
+                        <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #64748b; font-weight: normal;">Añada o elimine docentes de la base de datos.</p>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </header>
+                
+                <div class="section-content" style="display: none; max-height: 0px;">
+                    <!-- Formulario para agregar nuevo docente -->
+                    <div class="form-grid-two-columns" style="margin-bottom: 30px; border-bottom: 1px solid #e2e8f0; padding-bottom: 20px;">
+                        <div class="field-group">
+                            <label for="newTeacherName">Nombre Completo del Docente</label>
+                            <input type="text" id="newTeacherName" placeholder="Ej: Juan Pérez García">
+                        </div>
+                        <div class="field-group">
+                            <label for="newTeacherDni">DNI / ID del Docente</label>
+                            <input type="text" id="newTeacherDni" placeholder="Ej: 12345678">
+                        </div>
+                        <div class="field-group" style="grid-column: 1 / -1; text-align: right;">
+                            <button id="btnSaveTeacher" class="btn-save">Guardar Docente</button>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de docentes existentes -->
+                    <h3 style="font-size: 1rem; color: #475569; margin-bottom: 15px;">Docentes Registrados</h3>
+                    <div class="table-container" style="overflow-x:auto;">
+                        <table>
+                            <thead>
+                                <tr><th>Nombre del Docente (Editable)</th>
+                                <th>DNI / ID (Editable)</th>
+                                <th style="text-align: center;">Acciones</th></tr>
+                            </thead>
+                            <tbody id="teachersTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
             <!-- SECCIÓN 4: DASHBOARD / INFORME MENSUAL -->
             <section id="dashboardSection" class="form-container shadow" style="margin-top: 30px;">
                 <header class="section-header-collapsible" onclick="toggleSection(this, 'dashboardSection')">

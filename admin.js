@@ -13,41 +13,32 @@ import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/fi
 
 
 // 1. CONFIGURACIÓN FIREBASE
-
 const firebaseConfig = {
-
   apiKey: "AIzaSyB38Wbf0Q9YLz61vxQXVw1oSpMNyPVGy-c",
-
   authDomain: "programacion-cttc.firebaseapp.com",
-
   projectId: "programacion-cttc",
-
   storageBucket: "programacion-cttc.firebasestorage.app",
-
   messagingSenderId: "2776502914",
-
   appId: "1:2776502914:web:6389898d92d7c4b5ba1a9b"
-
 };
 
 
 
 const app = initializeApp(firebaseConfig);
-
 const db = getFirestore(app);
-
 const auth = getAuth(app);
-
+const teachersColRef = collection(db, "docentes");
 const colRef = collection(db, "programaciones");
 
 
 
 let selectedDocId = null;
-
 let modulosTemporales = [];
-
 window.editandoProgramaActivo = null;
 
+let allTeachers = []; // Array of {id, nombre, dni}
+let teacherNameDniMap = {}; // Map of { "NOMBRE": "DNI" }
+let teacherNames = []; // Array of ["NOMBRE1", "NOMBRE2"]
 
 
 const CAMPOS_SUMATORIA = ["Part_Programa", "Part_Curso", "Part_Beca", "Part_Pago_Programa", "Part_Pago_Curso"];
@@ -60,8 +51,6 @@ const CAMPOS_GESTION = ["Modulo Orden","MODULO-CURSO", "MODALIDAD MÓDULO", "MAT
 
 const CAMPOS_CHECKBOX = ["curso virtualizado", "Con nota en SINFO?", "Con certificados emitidos?", "Con atributo?_SSADETL", "Con acta de notas_SFASLST", "Con VAEE (SENATI VIRTUAL)"];
 
-const DOCENTES = ["ANDRES CCOCA", "CARMELON GONZALES", "JONATAN BEGAZO", "JORGE CAYCHO", "LUIS QUELOPANA", "MARCO POLO", "MARIA PEREZ", "MARTA LAURA", "MARTHA MAYTA", "NANCY PACHECO", "RICARDO MORENO", "ROBERT CALDERON", "VICTOR HUAMANÍ", "VICTOR GASTAÑETA"];
-
 const PROGRAMAS_NOMBRES = ["CURSO", "PROGRAMA DE GESTIÓN PARA LA FORMACIÓN DE PATRONISTAS DIGITALES", "ASISTENTE EN DISEÑO DE MODAS", "PROGRAMA DE GESTIÓN PARA FORMACIÓN DE AUDITORES DE CALIDAD TEXTIL Y CONFECCIÓN", "PROGRAMA DE ESPECIALIZACIÓN EN PATRONAJE DIGITAL Y ANIMACIÓN 3D", "TRAZABILIDAD Y GESTIÓN DE MERMAS EN LA INDUSTRIA TEXTIL", "GESTIÓN DE ALMACENES E INVENTARIOS PARA EMPRESAS EXPORTADORAS E IMPORTADORAS"];
 
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -71,23 +60,148 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
 
 // 2. INICIO Y SEGURIDAD
-
 onAuthStateChanged(auth, (user) => {
-
-    if (!user) window.location.href = "login.html";
-
-    else {
-
+    if (!user) {
+        window.location.href = "login.html";
+    } else {
         document.getElementById('adminUser').textContent = user.email;
-
-        initForm();
-
-        loadAdminTable();
-
+        initializeAdminPanel(); // New orchestrator function
     }
-
 });
 
+async function initializeAdminPanel() {
+    listenForTeacherUpdates(); // Configura el listener de docentes
+    loadAdminTable(); // Carga la tabla principal de cursos/programas
+    initForm(); // Inicializa el formulario principal (ahora puede usar la lista de docentes)
+    setupTeacherManagementEvents(); // Configura eventos para la nueva sección de docentes
+}
+
+// --- NUEVAS FUNCIONES PARA GESTIÓN DE DOCENTES ---
+
+function listenForTeacherUpdates() {
+    onSnapshot(query(teachersColRef, orderBy("nombre", "asc")), (snapshot) => {
+        allTeachers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Reset and repopulate helper structures
+        teacherNameDniMap = {};
+        teacherNames = [];
+        allTeachers.forEach(teacher => {
+            teacherNameDniMap[teacher.nombre.toUpperCase()] = teacher.dni;
+            teacherNames.push(teacher.nombre);
+        });
+
+        renderTeachersTable();
+        updateAllTeacherDropdowns();
+    });
+}
+
+function renderTeachersTable() {
+    const tbody = document.getElementById('teachersTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = allTeachers.map(teacher => `
+        <tr>
+            <td>
+                <input type="text" id="name-input-${teacher.id}" value="${teacher.nombre || ''}" placeholder="Editar Nombre..." class="search-input" style="width: 100%; padding: 8px; font-size: 0.85rem;">
+            </td>
+            <td>
+                <input type="text" id="dni-input-${teacher.id}" value="${teacher.dni || ''}" placeholder="Añadir/Editar DNI..." class="search-input" style="width: 100%; padding: 8px; font-size: 0.85rem;">
+            </td>
+            <td style="text-align: center;">
+                <button class="action-button" onclick="updateTeacher('${teacher.id}')" title="Actualizar Docente" style="background:#10b981; color:white; font-size: 0.8rem; padding: 6px 10px;">💾 Actualizar</button>
+                <button class="action-button delete" onclick="deleteTeacher('${teacher.id}')" title="Eliminar Docente">🗑️</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function saveTeacher() {
+    const nameInput = document.getElementById('newTeacherName');
+    const dniInput = document.getElementById('newTeacherDni');
+    const nombre = nameInput.value.trim().toUpperCase();
+    const dni = dniInput.value.trim();
+
+    if (!nombre) {
+        alert("Por favor, complete al menos el nombre del docente.");
+        return;
+    }
+
+    const nameExists = allTeachers.some(t => t.nombre && t.nombre.toUpperCase() === nombre);
+    if (nameExists) {
+        alert("Ya existe un docente con ese nombre.");
+        return;
+    }
+
+    // El DNI debe ser único solo si se proporciona.
+    if (dni && allTeachers.some(t => t.dni && t.dni === dni)) {
+        alert("Ya existe un docente con ese DNI.");
+        return;
+    }
+
+    try {
+        await addDoc(teachersColRef, { nombre, dni });
+        alert("✅ Docente guardado con éxito.");
+        nameInput.value = '';
+        dniInput.value = '';
+    } catch (error) {
+        console.error("Error guardando docente:", error);
+        alert("❌ Hubo un error al guardar el docente.");
+    }
+}
+
+window.deleteTeacher = async (id) => {
+    if (confirm("¿Está seguro de que desea eliminar a este docente? Esta acción no se puede deshacer.")) {
+        try {
+            await deleteDoc(doc(db, "docentes", id));
+            alert("🗑️ Docente eliminado.");
+        } catch (error) {
+            console.error("Error eliminando docente:", error);
+            alert("❌ Hubo un error al eliminar el docente.");
+        }
+    }
+};
+
+window.updateTeacher = async (id) => {
+    const nameInput = document.getElementById(`name-input-${id}`);
+    const dniInput = document.getElementById(`dni-input-${id}`);
+    if (!nameInput || !dniInput) return;
+
+    const newName = nameInput.value.trim().toUpperCase();
+    const newDni = dniInput.value.trim();
+
+    if (!newName) {
+        alert("El nombre del docente no puede estar vacío.");
+        return;
+    }
+
+    // Validar que el nombre no esté duplicado (excluyendo el docente actual)
+    const nameExists = allTeachers.some(t => t.id !== id && t.nombre && t.nombre.toUpperCase() === newName);
+    if (nameExists) {
+        alert("Ya existe otro docente con ese nombre.");
+        return;
+    }
+
+    // Validar que el DNI no esté duplicado (si se proporciona y excluyendo el docente actual)
+    if (newDni && allTeachers.some(t => t.id !== id && t.dni && t.dni === newDni)) {
+        alert("Ya existe otro docente con ese DNI.");
+        return;
+    }
+
+    try {
+        const teacherDocRef = doc(db, "docentes", id);
+        await setDoc(teacherDocRef, { nombre: newName, dni: newDni }, { merge: true });
+        alert("✅ Docente actualizado con éxito.");
+    } catch (error) {
+        console.error("Error actualizando docente:", error);
+        alert("❌ Hubo un error al actualizar el docente.");
+    }
+};
+
+function setupTeacherManagementEvents() {
+    const btnSave = document.getElementById('btnSaveTeacher');
+    if (btnSave) {
+        btnSave.onclick = saveTeacher;
+    }
+}
 
 
 // 3. GENERACIÓN DINÁMICA
@@ -167,21 +281,13 @@ function renderInput(campo, nextItem) {
 
 
     else if (campo === "Docente") {
-
         input = `
-
             <div class="multi-docente-container">
-
-                <select id="${id}" multiple style="height: 100px; padding: 5px;">
-
-                    ${DOCENTES.map(d => `<option value="${d}">${d}</option>`).join('')}
-
+                <select id="${id}" multiple style="height: 150px; padding: 5px; width: 100%;">
+                    ${teacherNames.map(d => `<option value="${d}">${d}</option>`).join('')}
                 </select>
-
                 <small style="color: #64748b; font-size: 10px;">Mantenga presionado Ctrl (o Cmd) para seleccionar varios.</small>
-
             </div>`;
-
     }
 
 
@@ -438,8 +544,6 @@ function configurarEventos() {
 
     });
 
-   
-
     const btnSubirModulo = document.getElementById('btnSubirModulo');
 
     if (btnSubirModulo) {
@@ -542,22 +646,6 @@ function recolectarDatosGestion() {
 
     });
 
-
-
-    // 3. Manejo especial de Docente (Múltiples valores)
-
-    const elDocente = document.getElementById('f_Docente');
-
-    if (elDocente && elDocente.multiple) {
-
-        const seleccionados = Array.from(elDocente.selectedOptions).map(opt => opt.value).filter(v => v !== "");
-
-        data["Docente"] = seleccionados.join(", "); // Guarda como "DOCENTE A, DOCENTE B"
-
-    }
-
-
-
     // 4. Recolección de Checkboxes (SI/NO)
 
     CAMPOS_CHECKBOX.forEach(c => {
@@ -625,7 +713,13 @@ window.prepareEditPrograma = async (nombrePrograma) => {
                 document.getElementById('group_CODIGO_PROGRAMA').style.display = 'block';
             }
 
-
+            const elDocente = document.getElementById('f_Docente');
+            if (elDocente && elDocente.multiple) {
+                const docentesGuardados = (data["Docente"] || "").split(',').map(s => s.trim());
+                Array.from(elDocente.options).forEach(option => {
+                    option.selected = docentesGuardados.includes(option.value);
+                });
+            }
 
             // Cargar módulos
 
@@ -824,19 +918,20 @@ document.getElementById('adminForm').onsubmit = async (e) => {
         // --- SECCIÓN 2: RECOLECCIÓN DE DATOS DE CABECERA ---
 
         const nCabecera = {};
-
         CAMPOS_CABECERA.forEach(c => {
-
             const el = document.getElementById(`f_${c.replace(/ /g, "_")}`);
-
-            if (el) nCabecera[c] = el.value;
-
+            if (c === 'Docente' && el && el.multiple) {
+                const seleccionados = Array.from(el.selectedOptions).map(opt => opt.value);
+                nCabecera["Docente"] = seleccionados.join(", ");
+                const dnis = seleccionados.map(nombre => teacherNameDniMap[nombre.toUpperCase()] || '');
+                nCabecera["Docente_DNI"] = dnis.join(", ");
+            } else if (el) {
+                nCabecera[c] = el.value;
+            }
         });
         
         const elCod = document.getElementById('f_CODIGO_PROGRAMA');
         if (elCod) nCabecera["CODIGO-PROGRAMA"] = elCod.value;
-
-
 
         // Fundamental para gestionar el cambio de nombre en CLONES
 
@@ -2936,12 +3031,25 @@ function loadAdminTable() {
 
         const conflictSel = document.getElementById('conflictDocenteSelector');
 
-        if (conflictSel && conflictSel.options.length <= 1) {
+        if (conflictSel) {
+            const allTeachersSet = new Set(teacherNames);
+            docs.forEach(d => {
+                if (d.Docente) {
+                    // Asegurarse de que los docentes nuevos también se añadan a la lista
+                    // para que puedan ser seleccionados en el filtro de cruce de horarios
+                    d.Docente.split(',').map(s => s.trim()).forEach(s => {
+                        if (s) allTeachersSet.add(s);
+                    });
+                }
+            });
+            const dynamicTeachers = Array.from(allTeachersSet).sort();
+            
             conflictSel.innerHTML = '<option value="">Seleccione un docente...</option>' + 
-            DOCENTES.map(d => `<option value="${d}">${d}</option>`).join('');
+            dynamicTeachers.map(d => `<option value="${d}">${d}</option>`).join('');
             conflictSel.onchange = (e) => checkTeacherConflicts(e.target.value);
         }
 
+        updateAllTeacherDropdowns(); // Ensure it's always up-to-date
 
         // Separar cursos y módulos
 
@@ -3196,7 +3304,6 @@ function loadAdminTable() {
         });
 
     });
-
 }
 
 // Listener global con delegación de eventos para los campos de fecha en la tabla
@@ -3214,6 +3321,27 @@ const actualizarFechaFinHandler = (e) => {
 document.addEventListener('change', actualizarFechaFinHandler);
 document.addEventListener('input', actualizarFechaFinHandler);
 document.addEventListener('blur', actualizarFechaFinHandler, true); // Capture phase
+
+function updateAllTeacherDropdowns() {
+    const datalist = document.getElementById('list_docentes');
+    if (datalist) {
+        datalist.innerHTML = teacherNames.map(d => `<option value="${d}">`).join('');
+    }
+
+    const conflictSel = document.getElementById('conflictDocenteSelector');
+    if (conflictSel) {
+        const currentVal = conflictSel.value;
+        const allTeachersSet = new Set(teacherNames);
+        (window.lastDashboardDocs || []).forEach(d => {
+            if (d.Docente) d.Docente.split(',').map(s => s.trim()).forEach(s => { if (s) allTeachersSet.add(s); });
+        });
+        const dynamicTeachers = Array.from(allTeachersSet).sort();
+
+        conflictSel.innerHTML = '<option value="">Seleccione un docente...</option>' + 
+        dynamicTeachers.map(d => `<option value="${d}">${d}</option>`).join('');
+        if (dynamicTeachers.includes(currentVal)) conflictSel.value = currentVal;
+    }
+}
 
 window.toggleProgram = (progId) => {
 
@@ -3348,6 +3476,14 @@ window.prepareEdit = async (id) => {
             const el = document.getElementById(`f_${c.replace(/ /g, "_")}`);
             if (el) el.checked = dt[c] === "SI";
         });
+
+        const elDocente = document.getElementById('f_Docente');
+        if (elDocente && elDocente.multiple) {
+            const docentesGuardados = (dt["Docente"] || "").split(',').map(s => s.trim());
+            Array.from(elDocente.options).forEach(option => {
+                option.selected = docentesGuardados.includes(option.value);
+            });
+        }
 
         // IMPORTANTE: Crear estructura de horario ANTES de llenarla
         const modalidad = dt["MODALIDAD MÓDULO"] || "Online";
