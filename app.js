@@ -30,9 +30,11 @@ let currentPrograma = "all";
 let currentModuloQuery = "";
 let currentNrcQuery = "";
 let hideStartedCourses = false;
+let showFechaFinColumn = false; // Nuevo estado para la columna Fecha Fin
 let userLogged = null;
 let lastSnapshotData = [];
-let sortDateAsc = true; // Control de orden ascendente/descendente de fecha
+let sortDateAsc = true; // Control de orden ascendente/descendente de fecha inicio
+let sortDateEndAsc = true; // Control de orden ascendente/descendente de fecha fin
 let defaultHojaHTML = null; // Plantilla base para Hoja de Especificaciones
 let currentFilteredData = []; // Guardará el resultado de los filtros aplicados
 
@@ -80,11 +82,15 @@ function renderFromData(rawData) {
 
         // 1. Filtrado lógico integral
         const filtered = rawData.filter(d => {
+            // --- LÓGICA DE FECHA CONDICIONAL ---
+            // Determina qué fecha usar para los filtros de tiempo (inicio o fin)
+            const fechaParaFiltrar = showFechaFinColumn ? d["Fecha de fin"] : d["Fecha de inicio"];
+
             // Filtro de Año
-            if (currentYear !== "all" && (d["Fecha de inicio"] || "").split('-')[0] !== currentYear) return false;
+            if (currentYear !== "all" && (fechaParaFiltrar || "").split('-')[0] !== currentYear) return false;
 
             // Filtro de Mes
-            if (currentMonth !== "all" && (d["Fecha de inicio"] || "").split('-')[1] !== currentMonth) return false;
+            if (currentMonth !== "all" && (fechaParaFiltrar || "").split('-')[1] !== currentMonth) return false;
             
             // Filtro de Docente
             if (currentDocente !== 'all') {
@@ -119,12 +125,15 @@ function renderFromData(rawData) {
 
             // Filtro para ocultar cursos iniciados
             if (hideStartedCourses) {
-                const fechaInicio = d["Fecha de inicio"];
-                if (fechaInicio) {
+                // Se basa en la fecha de inicio o fin dependiendo de la vista
+                if (fechaParaFiltrar) {
                     const hoy = new Date().toISOString().split('T')[0];
-                    if (fechaInicio < hoy) return false;
+                    if (fechaParaFiltrar < hoy) return false;
                 }
             }
+
+            // Nuevo filtro: Ocultar si no tiene fecha de fin cuando la columna está visible
+            if (showFechaFinColumn && !fechaParaFiltrar) return false;
 
             return true;
         });
@@ -168,13 +177,14 @@ function renderFromData(rawData) {
             const modulosOrdenados = [...modulos].sort((a, b) => new Date(a["Fecha de inicio"]) - new Date(b["Fecha de inicio"]));
             const primerModulo = modulosOrdenados[0];
             
-            renderBlocks.push({ 
-                type: 'programa', 
-                nombreProg, 
+            renderBlocks.push({
+                type: 'programa',
+                nombreProg,
                 progId,
-                modulos: modulosOrdenados, 
+                modulos: modulosOrdenados,
                 primerModulo,
-                date: primerModulo["Fecha de inicio"] || "9999-12-31" 
+                date: primerModulo["Fecha de inicio"] || "9999-12-31",
+                endDate: modulosOrdenados[modulosOrdenados.length - 1]["Fecha de fin"] || "9999-12-31"
             });
         });
 
@@ -184,7 +194,16 @@ function renderFromData(rawData) {
         renderBlocks.sort((a, b) => {
             const valA = a.date === "9999-12-31" ? Infinity : new Date(a.date).getTime();
             const valB = b.date === "9999-12-31" ? Infinity : new Date(b.date).getTime();
-            return sortDateAsc ? (valA - valB) : (valB - valA);
+            const valEndA = a.endDate === "9999-12-31" ? Infinity : new Date(a.endDate).getTime();
+            const valEndB = b.endDate === "9999-12-31" ? Infinity : new Date(b.endDate).getTime();
+
+            if (document.getElementById('btnSortFecha').classList.contains('active-sort')) {
+                return sortDateAsc ? (valA - valB) : (valB - valA);
+            }
+            if (document.getElementById('btnSortFechaFin').classList.contains('active-sort')) {
+                return sortDateEndAsc ? (valEndA - valEndB) : (valEndB - valA);
+            }
+            return sortDateAsc ? (valA - valB) : (valB - valA); // Default sort
         });
 
         // 6. Renderizado Final ordenado
@@ -206,6 +225,7 @@ function renderFromData(rawData) {
             
             trMaster.innerHTML = `
                 <td><strong>${primerModulo["Fecha de inicio"] || '-'}</strong></td>
+                <td class="col-fecha-fin"><strong>${modulos[modulos.length - 1]["Fecha de fin"] || '-'}</strong></td>
                 <td colspan="2">
                     <strong>📂 PROGRAMA: ${nombreProg}</strong><br>
                     <small style="color:#0ea5e9;">ID: ${codigoProg}</small>
@@ -230,6 +250,16 @@ function renderFromData(rawData) {
             }
         });
 
+        // Ocultar/Mostrar la columna FECHA FIN según el estado
+        document.querySelectorAll('.col-fecha-fin').forEach(el => {
+            el.style.display = showFechaFinColumn ? 'table-cell' : 'none';
+        });
+        // Ocultar/Mostrar la columna FECHA INICIO según el estado
+        document.querySelectorAll('.col-fecha-inicio').forEach(el => {
+            el.style.display = showFechaFinColumn ? 'none' : 'table-cell';
+        });
+
+
     } catch (err) {
         console.error('Error en renderFromData:', err);
     }
@@ -243,9 +273,12 @@ function createDataRow(d, customClass = '') {
     const nombreModuloCurso = d["MODULO-CURSO"] || d["PROGRAMA"] || "---";
 
     tr.innerHTML = `
-        <td>
+        <td class="col-fecha-inicio">
             <strong>${d["Fecha de inicio"] || '--'}</strong>
             ${esProximo ? '<br><span class="badge-urgent">PRÓXIMO</span>' : ''}
+        </td>
+        <td class="col-fecha-fin" style="display: none;">
+            <strong>${d["Fecha de fin"] || '--'}</strong>
         </td>
         <td style="color: #64748b; font-size: 0.85rem;">${d["PROGRAMA"] || 'CURSO INDEP.'}</td>
         <td><strong>${nombreModuloCurso}</strong></td>
@@ -586,12 +619,42 @@ document.getElementById('moduloFilter').oninput = (e) => { currentModuloQuery = 
 document.getElementById('hideStartedFilter').onchange = (e) => { hideStartedCourses = e.target.checked; renderFromData(lastSnapshotData); };
 const nrcFilterInput = document.getElementById('nrcFilterInput'); if (nrcFilterInput) { nrcFilterInput.oninput = (e) => { currentNrcQuery = e.target.value; renderFromData(lastSnapshotData); }; }
 
+// Evento para el nuevo botón de Fecha Fin
+const btnToggleFechaFin = document.getElementById('btnToggleFechaFin');
+if (btnToggleFechaFin) {
+    btnToggleFechaFin.onclick = () => {
+        showFechaFinColumn = !showFechaFinColumn;
+        btnToggleFechaFin.textContent = showFechaFinColumn ? 'Activar Fecha Inicio' : 'Activar Fecha Fin';
+        btnToggleFechaFin.style.backgroundColor = showFechaFinColumn ? '#10b981' : '#f59e0b';
+        
+        // Intercambiar visibilidad de columnas
+        document.getElementById('btnSortFecha').style.display = showFechaFinColumn ? 'none' : 'table-cell';
+        document.getElementById('thFechaFin').style.display = showFechaFinColumn ? 'table-cell' : 'none';
+
+        renderFromData(lastSnapshotData);
+    };
+}
+
 // Evento para ordenar por fecha desde el encabezado de tabla
 const btnSortFecha = document.getElementById('btnSortFecha');
 if (btnSortFecha) {
+    btnSortFecha.classList.add('active-sort'); // Activo por defecto
     btnSortFecha.onclick = () => {
         sortDateAsc = !sortDateAsc;
         document.getElementById('sortIconDate').textContent = sortDateAsc ? '🔼' : '🔽';
+        document.getElementById('btnSortFechaFin').classList.remove('active-sort');
+        btnSortFecha.classList.add('active-sort');
+        renderFromData(lastSnapshotData);
+    };
+}
+
+const btnSortFechaFin = document.getElementById('btnSortFechaFin');
+if (btnSortFechaFin) {
+    btnSortFechaFin.onclick = () => {
+        sortDateEndAsc = !sortDateEndAsc;
+        document.getElementById('sortIconDateEnd').textContent = sortDateEndAsc ? '🔼' : '🔽';
+        document.getElementById('btnSortFecha').classList.remove('active-sort');
+        btnSortFechaFin.classList.add('active-sort');
         renderFromData(lastSnapshotData);
     };
 }

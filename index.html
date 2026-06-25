@@ -23,6 +23,7 @@
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <a href="https://docs.google.com/spreadsheets/d/1OpDKrlcKvkDVQrP5gGg7Ox4mdYikb7sQY63cP_SuWT8/edit?usp=sharing" target="_blank" class="btn-primary" style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; padding: 8px 16px; background-color: #10b981; text-decoration: none;">📝 Registros alumnos</a>
+                        <a href="https://docs.google.com/spreadsheets/d/1UX2MWH_PeBpzwimTKCo-kOps5Jgwo-sZYOTwuMn2XiA/edit?usp=sharing" target="_blank" class="btn-primary" style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; padding: 8px 16px; background-color: #ef4444; text-decoration: none;">⚠️ Incidentes alumnos</a>
                         <div class="dropdown">
                             <button class="btn-primary dropdown-toggle" style="background-color: #f59e0b; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; padding: 8px 16px;">📊 Maximo/minimos</button>
                             <div class="dropdown-menu">
@@ -88,6 +89,11 @@
                             <input type="checkbox" id="hideStartedFilter" style="cursor:pointer;">
                             Ocultar iniciados
                         </label>
+
+                        <button type="button" id="btnToggleFechaFin" class="btn-secondary" style="background-color: #f59e0b; padding: 8px 12px; border: none; color: white; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500;">
+                            Activar Fecha Fin
+                        </button>
+
                     </div>
                 </div>
             </header>
@@ -96,7 +102,8 @@
                 <table>
                     <thead>
                         <tr>
-                            <th id="btnSortFecha" style="cursor:pointer; user-select:none; white-space:nowrap; background-color:#e2e8f0; color:#0f172a; border-radius:4px;" title="Clic para cambiar el orden">Fecha Inicio <span id="sortIconDate">🔼</span></th>
+                            <th id="btnSortFecha" class="col-fecha-inicio" style="cursor:pointer; user-select:none; white-space:nowrap; background-color:#e2e8f0; color:#0f172a; border-radius:4px;" title="Clic para cambiar el orden">Fecha Inicio <span id="sortIconDate">🔼</span></th>
+                            <th id="thFechaFin" class="col-fecha-fin" style="display: none; cursor:pointer; user-select:none; white-space:nowrap; background-color:#e2e8f0; color:#0f172a; border-radius:4px;" title="Clic para cambiar el orden">Fecha Fin <span id="sortIconDateEnd">🔼</span></th>
                             <th>Programa</th>
                             <th>Modulo / Curso</th>
                             <th>Docente</th>
