@@ -2016,15 +2016,37 @@ function renderDashboard(docs) {
         // --- VARIABLES BASE ---
         const company = doc['EMPRESA'] || "Sin Empresa";
         const students = parseInt(doc['#Participantes Real Total'] || 0);
-        const price = parseFloat(doc['Precio Sinfo'] || 0);
+        const priceSinfo = parseFloat(doc['Precio Sinfo'] || 0);
         const duration = parseInt(doc['Duracion'] || doc['Duración'] || 0);
         
         const beca = parseInt(doc['Part_Beca'] || 0);
-        const pago = (parseInt(doc['Part_Pago_Programa']) || 0) + (parseInt(doc['Part_Pago_Curso']) || 0);
+
+        // --- CÁLCULO DE INGRESOS POR PAGO CON PRECIOS DIFERENCIADOS ---
+        const pagoPrograma = parseInt(doc['Part_Pago_Programa'] || 0);
+        const pagoCurso = parseInt(doc['Part_Pago_Curso'] || 0);
+        const pago = pagoPrograma + pagoCurso;
+
+        const optionPagoPrograma = doc['Part_Pago_Programa_Price_Option'] || 'sinfo';
+        const optionPagoCurso = doc['Part_Pago_Curso_Price_Option'] || 'sinfo';
+
+        // Precios con descuento. Si no existen, se calculan al vuelo.
+        const price20desc = parseFloat(doc["Precio Sinfo - 20% Desc."] || (priceSinfo * 0.8));
+        const price25desc = parseFloat(doc["Precio Sinfo - 25% Desc."] || (priceSinfo * 0.75));
+
+        let priceForPagoPrograma = priceSinfo;
+        if (optionPagoPrograma === '20_desc') priceForPagoPrograma = price20desc;
+        else if (optionPagoPrograma === '25_desc') priceForPagoPrograma = price25desc;
+
+        let priceForPagoCurso = priceSinfo;
+        if (optionPagoCurso === '20_desc') priceForPagoCurso = price20desc;
+        else if (optionPagoCurso === '25_desc') priceForPagoCurso = price25desc;
+
+        const ingresoPago = (pagoPrograma * priceForPagoPrograma) + (pagoCurso * priceForPagoCurso);
+
         const patrocinio = students - beca - pago;
         
-        const ingresoPatrocinio = patrocinio * price;
-        const ingresoPago = pago * price;
+        // El ingreso por patrocinio sigue usando el precio Sinfo base.
+        const ingresoPatrocinio = patrocinio * priceSinfo;
         const totalIncome = ingresoPatrocinio + ingresoPago; // Ingreso calculado
         const totalHours = students * duration;
         const hasNRC = !!doc.NRC;
@@ -2801,13 +2823,31 @@ function renderDetailedNRCTable(docs) {
 
     // --- CÁLCULO DE TOTALES SOBRE TODOS LOS DOCUMENTOS ---
     sortedDocs.forEach(d => {
-        const costo = parseFloat(d['Precio Sinfo'] || 0);
+        const priceSinfo = parseFloat(d['Precio Sinfo'] || 0);
         const totalPart = parseInt(d['#Participantes Real Total'] || 0);
         const beca = parseInt(d['Part_Beca'] || 0);
-        const pago = (parseInt(d['Part_Pago_Programa']) || 0) + (parseInt(d['Part_Pago_Curso']) || 0);
+
+        const pagoPrograma = parseInt(d['Part_Pago_Programa'] || 0);
+        const pagoCurso = parseInt(d['Part_Pago_Curso'] || 0);
+        const pago = pagoPrograma + pagoCurso;
+
+        const optionPagoPrograma = d['Part_Pago_Programa_Price_Option'] || 'sinfo';
+        const optionPagoCurso = d['Part_Pago_Curso_Price_Option'] || 'sinfo';
+
+        const price20desc = parseFloat(d["Precio Sinfo - 20% Desc."] || (priceSinfo * 0.8));
+        const price25desc = parseFloat(d["Precio Sinfo - 25% Desc."] || (priceSinfo * 0.75));
+
+        let priceForPagoPrograma = priceSinfo;
+        if (optionPagoPrograma === '20_desc') priceForPagoPrograma = price20desc;
+        else if (optionPagoPrograma === '25_desc') priceForPagoPrograma = price25desc;
+
+        let priceForPagoCurso = priceSinfo;
+        if (optionPagoCurso === '20_desc') priceForPagoCurso = price20desc;
+        else if (optionPagoCurso === '25_desc') priceForPagoCurso = price25desc;
+
+        const ingresoPago = (pagoPrograma * priceForPagoPrograma) + (pagoCurso * priceForPagoCurso);
         const patrocinio = totalPart - beca - pago;
-        const ingresoPatrocinio = patrocinio * costo;
-        const ingresoPago = pago * costo;
+        const ingresoPatrocinio = patrocinio * priceSinfo;
         const duracion = parseInt(d['Duracion'] || d['Duración'] || 0);
         const horasTransf = totalPart * duracion;
 
