@@ -47,7 +47,7 @@ const FERIADOS_2026 = ["2026-01-01", "2026-04-02", "2026-04-03", "2026-05-01", "
 
 const CAMPOS_CABECERA = ["Item", "EMPRESA", "Docente", "AÑO", "PROGRAMA", "EDICIÓN", "MODALIDAD PROGRAMA"];
 
-const CAMPOS_GESTION = ["Modulo Orden","MODULO-CURSO", "MODALIDAD MÓDULO", "MAT-CUR", "NRC Semilla", "NRC", "Horario", "Duracion", "Fecha de inicio", "Fecha de fin", "Precio Sinfo", "#Participantes Objetivo", "#Participantes Real Total", "Part_Programa", "Part_Curso", "Part_Beca", "Part_Pago_Programa", "Part_Pago_Curso","#Participantes aprobados", "# participantes desertaron", "Software-Aplicativo", "OBS"];
+const CAMPOS_GESTION = ["Modulo Orden","MODULO-CURSO", "MODALIDAD MÓDULO", "MAT-CUR", "NRC Semilla", "NRC", "Horario", "Duracion", "Fecha de inicio", "Fecha de fin", "Precio Sinfo", "Precio Sinfo - 20% Desc.", "Precio Sinfo - 25% Desc.", "#Participantes Objetivo", "#Participantes Real Total", "Part_Programa", "Part_Curso", "Part_Beca", "Part_Pago_Programa", "Part_Pago_Curso","#Participantes aprobados", "# participantes desertaron", "Software-Aplicativo", "OBS"];
 
 const CAMPOS_CHECKBOX = ["curso virtualizado", "Con nota en SINFO?", "Con certificados emitidos?", "Con atributo?_SSADETL", "Con acta de notas_SFASLST", "Con VAEE (SENATI VIRTUAL)"];
 
@@ -3484,6 +3484,12 @@ window.prepareEdit = async (id) => {
                 option.selected = docentesGuardados.includes(option.value);
             });
         }
+
+        const precioSinfoEl = document.getElementById('f_Precio_Sinfo');
+        if (precioSinfoEl) {
+            precioSinfoEl.dispatchEvent(new Event('input')); // Trigger calculation for discounted prices
+        }
+
 
         // IMPORTANTE: Crear estructura de horario ANTES de llenarla
         const modalidad = dt["MODALIDAD MÓDULO"] || "Online";

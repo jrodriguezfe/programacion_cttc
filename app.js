@@ -36,6 +36,9 @@ let lastSnapshotData = [];
 let sortDateAsc = true; // Control de orden ascendente/descendente de fecha inicio
 let sortDateEndAsc = true; // Control de orden ascendente/descendente de fecha fin
 let defaultHojaHTML = null; // Plantilla base para Hoja de Especificaciones
+let currentPrecioSinfo = 0;
+let currentPrecioSinfo20Desc = 0;
+let currentPrecioSinfo25Desc = 0;
 let currentFilteredData = []; // Guardará el resultado de los filtros aplicados
 
 let selectedEmpresas = []; // Almacena las empresas marcadas
@@ -417,6 +420,12 @@ function openQuickEdit(id, data) {
     const modal = document.getElementById('quickEditModal');
     document.getElementById('courseNameTitle').textContent = data["MODULO-CURSO"] || data["PROGRAMA"] || "Sin nombre";
 
+    // Store prices for calculations
+    currentPrecioSinfo = parseFloat(data["Precio Sinfo"] || 0);
+    // Si los precios con descuento no existen en la base de datos, los calculamos al vuelo
+    currentPrecioSinfo20Desc = parseFloat(data["Precio Sinfo - 20% Desc."] || (currentPrecioSinfo * 0.80));
+    currentPrecioSinfo25Desc = parseFloat(data["Precio Sinfo - 25% Desc."] || (currentPrecioSinfo * 0.75));
+
     // Cargar NRC
     const nrcInput = document.getElementById('q_NRC');
     if (nrcInput) nrcInput.value = data.NRC || "";
@@ -432,7 +441,24 @@ function openQuickEdit(id, data) {
         }
     });
 
-    document.getElementById('q_Total_Calculado').textContent = sumaActual;
+    // Populate price options for PAGO PROG. and PAGO CURSO
+    const populatePriceOptions = (field, selectedOption) => {
+        const selectEl = document.getElementById(`q_${field}_Price_Option`);
+        if (selectEl) {
+            selectEl.innerHTML = `
+                <option value="sinfo">S/ ${currentPrecioSinfo.toFixed(2)} (Sinfo)</option>
+                <option value="20_desc">S/ ${currentPrecioSinfo20Desc.toFixed(2)} (20% Desc.)</option>
+                <option value="25_desc">S/ ${currentPrecioSinfo25Desc.toFixed(2)} (25% Desc.)</option>
+            `;
+            selectEl.value = selectedOption || 'sinfo';
+        }
+    };
+
+    populatePriceOptions('Part_Pago_Programa', data.Part_Pago_Programa_Price_Option);
+    populatePriceOptions('Part_Pago_Curso', data.Part_Pago_Curso_Price_Option);
+
+
+    document.getElementById('q_Total_Calculado').textContent = sumaActual; // Mantenemos la suma de participantes
 
     // --- POBLAR HOJA DE ESPECIFICACIONES (NUEVO PANEL) ---
     const hojaContent = document.getElementById('hojaEspecificacionesContent');
@@ -579,6 +605,12 @@ if (btnSaveQuick) {
                 // Se guarda en la DB usando el nombre exacto del campo (ej: Part_Programa)
                 updates[campo] = val; 
                 totalReal += val;
+
+                // Guardar la opción de precio seleccionada
+                if (campo === "Part_Pago_Programa" || campo === "Part_Pago_Curso") {
+                    const priceOptionId = `q_${campo}_Price_Option`;
+                    updates[`${campo}_Price_Option`] = document.getElementById(priceOptionId)?.value || 'sinfo';
+                }
             }
         });
 

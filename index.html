@@ -151,18 +151,30 @@
                         <label style="display: block; font-size: 10px; font-weight: bold; color: #64748b; margin-bottom: 4px;">P. BECA</label>
                         <input type="number" id="q_Part_Beca" class="q-input" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;">
                     </div>
-                    <div class="field-box">
+                    <div class="field-box" style="grid-column: 1;">
                         <label style="display: block; font-size: 10px; font-weight: bold; color: #64748b; margin-bottom: 4px;">PAGO PROG.</label>
                         <input type="number" id="q_Part_Pago_Programa" class="q-input" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;">
                     </div>
-                    <div class="field-box" style="grid-column: span 2;">
+                    <div class="field-box" style="grid-column: 2;">
+                        <label style="display: block; font-size: 10px; font-weight: bold; color: #64748b; margin-bottom: 4px;">OPCIÓN PRECIO</label>
+                        <select id="q_Part_Pago_Programa_Price_Option" class="q-input" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;">
+                            <!-- Options will be populated by JS -->
+                        </select>
+                    </div>
+                    <div class="field-box" style="grid-column: 1;">
                         <label style="display: block; font-size: 10px; font-weight: bold; color: #64748b; margin-bottom: 4px;">PAGO CURSO</label>
                         <input type="number" id="q_Part_Pago_Curso" class="q-input" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;">
+                    </div>
+                    <div class="field-box" style="grid-column: 2;">
+                        <label style="display: block; font-size: 10px; font-weight: bold; color: #64748b; margin-bottom: 4px;">OPCIÓN PRECIO</label>
+                        <select id="q_Part_Pago_Curso_Price_Option" class="q-input" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;">
+                            <!-- Options will be populated by JS -->
+                        </select>
                     </div>
                 </div>
 
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
-                    <span style="font-size: 11px; color: #64748b; font-weight: bold; display: block;">TOTAL REAL CALCULADO</span>
+                    <span style="font-size: 11px; color: #64748b; font-weight: bold; display: block;">TOTAL REAL CALCULADO (PARTICIPANTES)</span>
                     <div id="q_Total_Calculado" style="font-size: 1.5rem; font-weight: 800; color: #10b981;">0</div>
                 </div>
 
