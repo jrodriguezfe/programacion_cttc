@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, query, orderBy, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, query, orderBy, updateDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
@@ -16,8 +16,12 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const colRef = collection(db, "programaciones");
 const teachersColRef = collection(db, "docentes");
+const supervisionPlanRef = doc(db, "supervisionPlanes", "semestral");
 
 let teacherIdMap = {};
+let supervisionTeachers = [];
+let supervisionPlan = { cfp: "CTTC", fecha: "", jefe: "", docentes: [] };
+const supervisionLocalStorageKey = "cttc-supervision-plan-semestral";
 // Configuración de campos
 const CAMPOS_MODAL = ["Part_Programa", "Part_Curso", "Part_Beca", "Part_Pago_Programa", "Part_Pago_Curso"];
 
@@ -64,10 +68,178 @@ onSnapshot(query(teachersColRef), (snapshot) => {
             newMap[teacher.nombre.toUpperCase()] = teacher.dni;
         }
     });
+    supervisionTeachers = snapshot.docs
+        .map(docSnapshot => ({ id: docSnapshot.id, nombre: docSnapshot.data().nombre }))
+        .filter(teacher => teacher.nombre)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre));
     teacherIdMap = newMap;
+    renderSupervisionTeachers();
     // Re-render data if it's already loaded to update any potential teacher info
     if (lastSnapshotData.length > 0) renderFromData(lastSnapshotData);
 });
+
+onSnapshot(supervisionPlanRef, (snapshot) => {
+    if (snapshot.exists()) {
+        supervisionPlan = { ...supervisionPlan, ...snapshot.data() };
+        localStorage.setItem(supervisionLocalStorageKey, JSON.stringify(supervisionPlan));
+    } else {
+        loadLocalSupervisionPlan();
+    }
+    renderSupervisionTeachers();
+}, (error) => {
+    console.warn('No se pudo leer el plan de supervisión desde Firebase:', error);
+    loadLocalSupervisionPlan();
+    renderSupervisionTeachers();
+});
+
+function loadLocalSupervisionPlan() {
+    try {
+        const localPlan = JSON.parse(localStorage.getItem(supervisionLocalStorageKey) || 'null');
+        if (localPlan) supervisionPlan = { ...supervisionPlan, ...localPlan };
+    } catch (error) {
+        console.warn('No se pudo leer la copia local del plan:', error);
+    }
+}
+
+function renderSupervisionTeachers() {
+    const body = document.getElementById('supervisionTeachersBody');
+    if (!body) return;
+
+    const savedTeachers = new Map((supervisionPlan.docentes || []).map(teacher => [teacher.id, teacher]));
+    body.innerHTML = supervisionTeachers.length > 0
+        ? supervisionTeachers.map(teacher => {
+            const saved = savedTeachers.get(teacher.id) || {};
+            const history = saved.historial || [];
+            const historyHtml = history.length > 0
+                ? history.map((item, index) => `<div class="supervision-history-item"><span>${item.fecha} <strong>(E)</strong></span><button type="button" class="supervision-history-delete" onclick="deleteSupervisionHistory('${teacher.id}', ${index})" title="Eliminar fecha ejecutada" aria-label="Eliminar fecha ejecutada">×</button></div>`).join('')
+                : '<span class="supervision-no-history">Sin ejecuciones</span>';
+            return `<tr>
+                <td>${teacher.nombre}</td>
+                <td><input type="date" class="supervision-date" data-teacher-id="${teacher.id}" value="${saved.fecha || ''}"></td>
+                <td><select class="supervision-status" data-teacher-id="${teacher.id}">
+                    <option value="P" ${saved.estado === 'P' || !saved.estado ? 'selected' : ''}>P - Programado</option>
+                    <option value="E" ${saved.estado === 'E' ? 'selected' : ''}>E - Ejecutado</option>
+                </select></td><td class="supervision-history">${historyHtml}</td>
+            </tr>`;
+        }).join('')
+        : '<tr><td colspan="4" class="supervision-empty">No hay docentes registrados en Gestión Docente.</td></tr>';
+
+    const cfp = document.getElementById('supervisionCfp');
+    const fecha = document.getElementById('supervisionFecha');
+    const jefe = document.getElementById('supervisionJefe');
+    if (cfp) cfp.value = supervisionPlan.cfp || 'CTTC';
+    if (fecha) fecha.value = supervisionPlan.fecha || '';
+    if (jefe) jefe.value = supervisionPlan.jefe || '';
+}
+
+window.deleteSupervisionHistory = async (teacherId, historyIndex) => {
+    if (!userLogged) {
+        const message = document.getElementById('supervisionSaveMessage');
+        if (message) message.textContent = 'Debe iniciar sesión como administrador para eliminar historial.';
+        return;
+    }
+
+    const teacher = (supervisionPlan.docentes || []).find(item => item.id === teacherId);
+    const historyItem = teacher?.historial?.[historyIndex];
+    if (!teacher || !historyItem) return;
+    if (!confirm(`¿Eliminar del historial la supervisión del ${historyItem.fecha}?`)) return;
+
+    teacher.historial.splice(historyIndex, 1);
+    supervisionPlan = { ...supervisionPlan, docentes: supervisionPlan.docentes };
+    localStorage.setItem(supervisionLocalStorageKey, JSON.stringify(supervisionPlan));
+    renderSupervisionTeachers();
+
+    try {
+        await setDoc(supervisionPlanRef, { ...supervisionPlan, updatedAt: new Date() });
+        const message = document.getElementById('supervisionSaveMessage');
+        if (message) message.textContent = 'Historial eliminado.';
+    } catch (error) {
+        console.error('Error eliminando historial de supervisión:', error);
+        const message = document.getElementById('supervisionSaveMessage');
+        if (message) message.textContent = 'Historial eliminado localmente. Firebase rechazó la escritura por permisos.';
+    }
+};
+
+function setupSupervisionPlan() {
+    const openButton = document.getElementById('btnOpenSupervisionPlan');
+    const modal = document.getElementById('supervisionPlanModal');
+    const closeButton = document.getElementById('btnCloseSupervisionPlan');
+    const saveButton = document.getElementById('btnSaveSupervisionPlan');
+    const exportButton = document.getElementById('btnExportSupervisionExcel');
+    if (!openButton || !modal || !closeButton || !saveButton || !exportButton) return;
+
+    openButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        modal.classList.remove('hidden');
+        renderSupervisionTeachers();
+    });
+    closeButton.addEventListener('click', () => modal.classList.add('hidden'));
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) modal.classList.add('hidden');
+    });
+    saveButton.addEventListener('click', async () => {
+        const message = document.getElementById('supervisionSaveMessage');
+        if (!userLogged) {
+            if (message) message.textContent = 'Debe iniciar sesión como administrador para guardar el plan.';
+            return;
+        }
+        const previousTeachers = new Map((supervisionPlan.docentes || []).map(teacher => [teacher.id, teacher]));
+        const docentes = supervisionTeachers.map(teacher => ({
+            id: teacher.id,
+            nombre: teacher.nombre,
+            fecha: document.querySelector(`.supervision-date[data-teacher-id="${teacher.id}"]`)?.value || '',
+            estado: document.querySelector(`.supervision-status[data-teacher-id="${teacher.id}"]`)?.value || 'P',
+            historial: [...(previousTeachers.get(teacher.id)?.historial || [])]
+        }));
+        saveButton.disabled = true;
+        docentes.forEach(teacher => {
+            const previous = previousTeachers.get(teacher.id);
+            if (teacher.estado === 'E' && teacher.fecha && (previous?.estado !== 'E' || previous?.fecha !== teacher.fecha)) {
+                if (!teacher.historial.some(item => item.fecha === teacher.fecha)) {
+                    teacher.historial.push({ fecha: teacher.fecha, ejecutadoEn: new Date().toISOString() });
+                }
+                teacher.fecha = '';
+                teacher.estado = 'P';
+            }
+        });
+        const planToSave = {
+            cfp: document.getElementById('supervisionCfp').value.trim(),
+            fecha: document.getElementById('supervisionFecha').value,
+            jefe: document.getElementById('supervisionJefe').value.trim(),
+            docentes
+        };
+        supervisionPlan = planToSave;
+        localStorage.setItem(supervisionLocalStorageKey, JSON.stringify(supervisionPlan));
+        renderSupervisionTeachers();
+        try {
+            await setDoc(supervisionPlanRef, {
+                ...planToSave,
+                updatedAt: new Date()
+            });
+            if (message) message.textContent = 'Plan guardado.';
+        } catch (error) {
+            console.error('Error guardando plan de supervisión:', error);
+            if (message) message.textContent = error.code === 'permission-denied'
+                ? 'Guardado local. Firebase rechazó la escritura por permisos.'
+                : `Guardado local. Error Firebase: ${error.message}`;
+        } finally {
+            saveButton.disabled = false;
+        }
+    });
+    exportButton.addEventListener('click', () => {
+        const rows = [];
+        (supervisionPlan.docentes || []).forEach(teacher => {
+            rows.push({ Docente: teacher.nombre, 'Fecha programada': teacher.fecha || '', Estado: teacher.estado || 'P', 'Fecha ejecutada': '', 'Tipo de registro': 'Actual' });
+            (teacher.historial || []).forEach(item => rows.push({ Docente: teacher.nombre, 'Fecha programada': '', Estado: 'E', 'Fecha ejecutada': item.fecha, 'Tipo de registro': 'Historial' }));
+        });
+        const worksheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ Docente: 'Sin docentes', 'Fecha programada': '', Estado: '', 'Fecha ejecutada': '', 'Tipo de registro': '' }]);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Plan Supervisión');
+        XLSX.writeFile(workbook, `Plan_Supervision_${new Date().getFullYear()}.xlsx`);
+    });
+}
+
+setupSupervisionPlan();
 // --- GESTIÓN DE DATOS ---
 function loadData() {
     const q = query(colRef, orderBy("Fecha de inicio", "asc"));

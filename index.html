@@ -23,6 +23,13 @@
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <a href="https://docs.google.com/spreadsheets/d/1OpDKrlcKvkDVQrP5gGg7Ox4mdYikb7sQY63cP_SuWT8/edit?usp=sharing" target="_blank" class="btn-primary" style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; padding: 8px 16px; background-color: #10b981; text-decoration: none;">📝 Registros alumnos</a>
+                        <div class="dropdown">
+                            <button class="btn-primary dropdown-toggle supervision-toggle" type="button">Supervisión</button>
+                            <div class="dropdown-menu">
+                                <a href="https://drive.google.com/file/d/1bjmiJTBKM5BcaCRj4H4e83beagsoNzln/view?usp=sharing" target="_blank">Procedimiento</a>
+                                <a href="#" id="btnOpenSupervisionPlan">Plan</a>
+                            </div>
+                        </div>
                         <a href="https://drive.google.com/drive/folders/1jh9FGy-yxiiPzQMIhASVdNo9vYaC7BKL?usp=drive_link" target="_blank" class="btn-primary" style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; padding: 8px 16px; background-color: #3b82f6; text-decoration: none;">Creación eventos</a>
                         <a href="https://docs.google.com/spreadsheets/d/1UX2MWH_PeBpzwimTKCo-kOps5Jgwo-sZYOTwuMn2XiA/edit?usp=sharing" target="_blank" class="btn-primary" style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; padding: 8px 16px; background-color: #ef4444; text-decoration: none;">⚠️ Incidentes alumnos</a>
                         <div class="dropdown">
@@ -329,7 +336,7 @@
                             <p style="margin:0;">Lugar y fecha</p>
                         </div>
                         <div style="text-align: center;">
-                            <p class="editable-field" contenteditable="true" style="border-bottom: 1px solid #000; padding: 0 10px; margin:0 0 5px 0; display: inline-block; min-width: 150px;">Gustavo Fernández</p><br>
+                            <p class="editable-field" contenteditable="true" style="border-bottom: 1px solid #000; padding: 0 10px; margin:0 0 5px 0; display: inline-block; min-width: 150px;">Jean Rodriguez</p><br>
                             <p style="margin:0;">Nombre y firma del elaborador</p>
                         </div>
                     </div>
@@ -391,6 +398,35 @@
                 <div style="display: flex; gap: 10px;">
                     <button id="btnCopyNrcModal" class="btn-save" style="flex: 1;">Copiar Todo</button>
                     <button id="btnCloseNrcModal" class="btn-secondary" style="flex: 1; background: #64748b; color: white; border: none;">Cerrar</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="supervisionPlanModal" class="modal hidden">
+            <div class="modal-content shadow supervision-modal-content">
+                <header class="supervision-modal-header">
+                    <div>
+                        <p class="supervision-kicker">Anexo N° 08</p>
+                        <h2>Plan de Supervisión al Proceso de Formación y Capacitación Profesional</h2>
+                        <p class="supervision-title">PLAN DE SUPERVISIÓN AL PROCESO DE FORMACIÓN Y CAPACITACIÓN PROFESIONAL - SEMESTRAL</p>
+                    </div>
+                    <button type="button" id="btnCloseSupervisionPlan" class="modal-close" aria-label="Cerrar">×</button>
+                </header>
+                <div class="supervision-fields">
+                    <label>CFP:<input id="supervisionCfp" type="text" value="CTTC"></label>
+                    <label>FECHA:<input id="supervisionFecha" type="date"></label>
+                    <label>JEFE DE CFP/UCP/ESCUELA:<input id="supervisionJefe" type="text"></label>
+                </div>
+                <div class="supervision-table-wrapper">
+                    <table class="supervision-table">
+                        <thead><tr><th>Docente</th><th>Fecha de supervisión</th><th>Estado</th><th>Historial ejecutado</th></tr></thead>
+                        <tbody id="supervisionTeachersBody"></tbody>
+                    </table>
+                </div>
+                <div class="supervision-actions">
+                    <span id="supervisionSaveMessage" role="status"></span>
+                    <button type="button" id="btnExportSupervisionExcel" class="btn-secondary">📥 Descargar Excel</button>
+                    <button type="button" id="btnSaveSupervisionPlan" class="btn-save">Guardar Plan</button>
                 </div>
             </div>
         </div>
