@@ -416,12 +416,33 @@
                 </header>
                 <div class="supervision-fields">
                     <label>CFP:<input id="supervisionCfp" type="text" value="CTTC"></label>
+                    <label>PERÍODO:
+                        <select id="supervisionPeriodo">
+                            <option value="2026-I">2026-I</option>
+                            <option value="2026-II">2026-II</option>
+                            <option value="2027-I">2027-I</option>
+                            <option value="2027-II">2027-II</option>
+                            <option value="2028-I">2028-I</option>
+                            <option value="2028-II">2028-II</option>
+                        </select>
+                    </label>
                     <label>FECHA:<input id="supervisionFecha" type="date"></label>
                     <label>JEFE DE CFP/UCP/ESCUELA:<input id="supervisionJefe" type="text"></label>
                 </div>
                 <div class="supervision-table-wrapper">
                     <table class="supervision-table">
-                        <thead><tr><th>Docente</th><th>Fecha de supervisión</th><th>Estado</th><th>Historial ejecutado</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Docente</th>
+                                <th>
+                                    <button type="button" id="supervisionSortFechaBtn" class="supervision-sort-btn" style="background: none; border: none; color: inherit; font: inherit; font-weight: 700; cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 6px;">
+                                        Fecha de supervisión <span id="supervisionSortFechaLabel">↑</span>
+                                    </button>
+                                </th>
+                                <th>Estado</th>
+                                <th>Historial ejecutado</th>
+                            </tr>
+                        </thead>
                         <tbody id="supervisionTeachersBody"></tbody>
                     </table>
                 </div>

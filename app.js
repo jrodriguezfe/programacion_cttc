@@ -20,8 +20,11 @@ const supervisionPlanRef = doc(db, "supervisionPlanes", "semestral");
 
 let teacherIdMap = {};
 let supervisionTeachers = [];
-let supervisionPlan = { cfp: "CTTC", fecha: "", jefe: "", docentes: [] };
-const supervisionLocalStorageKey = "cttc-supervision-plan-semestral";
+let supervisionPlan = { cfp: "CTTC", fecha: "", jefe: "", docentes: [], periodo: "2026-I" };
+let supervisionSortDirection = 'asc';
+let currentSupervisionPeriod = "2026-I";
+let supervisionPlanUnsubscribe = null;
+const supervisionLocalStorageKeyPrefix = "cttc-supervision-plan";
 // Configuración de campos
 const CAMPOS_MODAL = ["Part_Programa", "Part_Curso", "Part_Beca", "Part_Pago_Programa", "Part_Pago_Curso"];
 
@@ -78,27 +81,74 @@ onSnapshot(query(teachersColRef), (snapshot) => {
     if (lastSnapshotData.length > 0) renderFromData(lastSnapshotData);
 });
 
-onSnapshot(supervisionPlanRef, (snapshot) => {
-    if (snapshot.exists()) {
-        supervisionPlan = { ...supervisionPlan, ...snapshot.data() };
-        localStorage.setItem(supervisionLocalStorageKey, JSON.stringify(supervisionPlan));
-    } else {
-        loadLocalSupervisionPlan();
-    }
-    renderSupervisionTeachers();
-}, (error) => {
-    console.warn('No se pudo leer el plan de supervisión desde Firebase:', error);
-    loadLocalSupervisionPlan();
-    renderSupervisionTeachers();
-});
+function getSupervisionLocalStorageKey(period = currentSupervisionPeriod) {
+    return `${supervisionLocalStorageKeyPrefix}-${(period || 'semestral').trim() || 'semestral'}`;
+}
 
-function loadLocalSupervisionPlan() {
+function getDefaultSupervisionPeriod() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const semestre = now.getMonth() < 6 ? 'I' : 'II';
+    return `${year}-${semestre}`;
+}
+
+function loadSupervisionPlan(period = currentSupervisionPeriod) {
+    currentSupervisionPeriod = (period || getDefaultSupervisionPeriod()).trim() || getDefaultSupervisionPeriod();
+    if (supervisionPlanUnsubscribe) supervisionPlanUnsubscribe();
+
+    const planRef = doc(db, 'supervisionPlanes', currentSupervisionPeriod);
+    supervisionPlanUnsubscribe = onSnapshot(planRef, (snapshot) => {
+        if (snapshot.exists()) {
+            supervisionPlan = { ...supervisionPlan, ...snapshot.data(), periodo: currentSupervisionPeriod };
+            localStorage.setItem(getSupervisionLocalStorageKey(currentSupervisionPeriod), JSON.stringify(supervisionPlan));
+        } else {
+            loadLocalSupervisionPlan(currentSupervisionPeriod);
+        }
+        renderSupervisionTeachers();
+    }, (error) => {
+        console.warn('No se pudo leer el plan de supervisión desde Firebase:', error);
+        loadLocalSupervisionPlan(currentSupervisionPeriod);
+        renderSupervisionTeachers();
+    });
+
+    const periodField = document.getElementById('supervisionPeriodo');
+    if (periodField) {
+        const hasOption = Array.from(periodField.options).some(option => option.value === currentSupervisionPeriod);
+        if (!hasOption) {
+            const option = document.createElement('option');
+            option.value = currentSupervisionPeriod;
+            option.textContent = currentSupervisionPeriod;
+            periodField.appendChild(option);
+        }
+        periodField.value = currentSupervisionPeriod;
+    }
+}
+
+function loadLocalSupervisionPlan(period = currentSupervisionPeriod) {
     try {
-        const localPlan = JSON.parse(localStorage.getItem(supervisionLocalStorageKey) || 'null');
-        if (localPlan) supervisionPlan = { ...supervisionPlan, ...localPlan };
+        const localPlan = JSON.parse(localStorage.getItem(getSupervisionLocalStorageKey(period)) || 'null');
+        if (localPlan) supervisionPlan = { ...supervisionPlan, ...localPlan, periodo: currentSupervisionPeriod };
+        else supervisionPlan = { ...supervisionPlan, periodo: currentSupervisionPeriod };
     } catch (error) {
         console.warn('No se pudo leer la copia local del plan:', error);
+        supervisionPlan = { ...supervisionPlan, periodo: currentSupervisionPeriod };
     }
+}
+
+function getSortedSupervisionTeachers() {
+    return [...supervisionTeachers].sort((teacherA, teacherB) => {
+        const savedA = (supervisionPlan.docentes || []).find(item => item.id === teacherA.id) || {};
+        const savedB = (supervisionPlan.docentes || []).find(item => item.id === teacherB.id) || {};
+        const dateA = savedA.fecha || '';
+        const dateB = savedB.fecha || '';
+
+        if (!dateA && !dateB) return teacherA.nombre.localeCompare(teacherB.nombre);
+        if (!dateA) return supervisionSortDirection === 'asc' ? 1 : -1;
+        if (!dateB) return supervisionSortDirection === 'asc' ? -1 : 1;
+
+        const comparison = new Date(dateA) - new Date(dateB);
+        return supervisionSortDirection === 'asc' ? comparison : comparison * -1;
+    });
 }
 
 function renderSupervisionTeachers() {
@@ -106,8 +156,12 @@ function renderSupervisionTeachers() {
     if (!body) return;
 
     const savedTeachers = new Map((supervisionPlan.docentes || []).map(teacher => [teacher.id, teacher]));
-    body.innerHTML = supervisionTeachers.length > 0
-        ? supervisionTeachers.map(teacher => {
+    const sortedTeachers = getSortedSupervisionTeachers();
+    const sortLabel = document.getElementById('supervisionSortFechaLabel');
+    if (sortLabel) sortLabel.textContent = supervisionSortDirection === 'asc' ? '↑' : '↓';
+
+    body.innerHTML = sortedTeachers.length > 0
+        ? sortedTeachers.map(teacher => {
             const saved = savedTeachers.get(teacher.id) || {};
             const history = saved.historial || [];
             const historyHtml = history.length > 0
@@ -127,9 +181,11 @@ function renderSupervisionTeachers() {
     const cfp = document.getElementById('supervisionCfp');
     const fecha = document.getElementById('supervisionFecha');
     const jefe = document.getElementById('supervisionJefe');
+    const periodo = document.getElementById('supervisionPeriodo');
     if (cfp) cfp.value = supervisionPlan.cfp || 'CTTC';
     if (fecha) fecha.value = supervisionPlan.fecha || '';
     if (jefe) jefe.value = supervisionPlan.jefe || '';
+    if (periodo) periodo.value = currentSupervisionPeriod || supervisionPlan.periodo || getDefaultSupervisionPeriod();
 }
 
 window.deleteSupervisionHistory = async (teacherId, historyIndex) => {
@@ -166,10 +222,36 @@ function setupSupervisionPlan() {
     const closeButton = document.getElementById('btnCloseSupervisionPlan');
     const saveButton = document.getElementById('btnSaveSupervisionPlan');
     const exportButton = document.getElementById('btnExportSupervisionExcel');
+    const sortButton = document.getElementById('supervisionSortFechaBtn');
+    const periodoInput = document.getElementById('supervisionPeriodo');
     if (!openButton || !modal || !closeButton || !saveButton || !exportButton) return;
+
+    if (sortButton) {
+        sortButton.addEventListener('click', () => {
+            supervisionSortDirection = supervisionSortDirection === 'asc' ? 'desc' : 'asc';
+            renderSupervisionTeachers();
+        });
+    }
+
+    if (periodoInput) {
+        periodoInput.addEventListener('change', (event) => {
+            const nextPeriod = event.target.value.trim() || getDefaultSupervisionPeriod();
+            loadSupervisionPlan(nextPeriod);
+        });
+    }
 
     openButton.addEventListener('click', (event) => {
         event.preventDefault();
+        if (periodoInput && !periodoInput.value.trim()) {
+            periodoInput.value = getDefaultSupervisionPeriod();
+        }
+        if (periodoInput && !Array.from(periodoInput.options).some(option => option.value === periodoInput.value)) {
+            const option = document.createElement('option');
+            option.value = periodoInput.value;
+            option.textContent = periodoInput.value;
+            periodoInput.appendChild(option);
+        }
+        loadSupervisionPlan(periodoInput ? periodoInput.value : currentSupervisionPeriod);
         modal.classList.remove('hidden');
         renderSupervisionTeachers();
     });
@@ -183,6 +265,8 @@ function setupSupervisionPlan() {
             if (message) message.textContent = 'Debe iniciar sesión como administrador para guardar el plan.';
             return;
         }
+        const selectedPeriod = (document.getElementById('supervisionPeriodo')?.value || currentSupervisionPeriod || getDefaultSupervisionPeriod()).trim() || getDefaultSupervisionPeriod();
+        currentSupervisionPeriod = selectedPeriod;
         const previousTeachers = new Map((supervisionPlan.docentes || []).map(teacher => [teacher.id, teacher]));
         const docentes = supervisionTeachers.map(teacher => ({
             id: teacher.id,
@@ -204,15 +288,16 @@ function setupSupervisionPlan() {
         });
         const planToSave = {
             cfp: document.getElementById('supervisionCfp').value.trim(),
+            periodo: currentSupervisionPeriod,
             fecha: document.getElementById('supervisionFecha').value,
             jefe: document.getElementById('supervisionJefe').value.trim(),
             docentes
         };
         supervisionPlan = planToSave;
-        localStorage.setItem(supervisionLocalStorageKey, JSON.stringify(supervisionPlan));
+        localStorage.setItem(getSupervisionLocalStorageKey(currentSupervisionPeriod), JSON.stringify(supervisionPlan));
         renderSupervisionTeachers();
         try {
-            await setDoc(supervisionPlanRef, {
+            await setDoc(doc(db, 'supervisionPlanes', currentSupervisionPeriod), {
                 ...planToSave,
                 updatedAt: new Date()
             });
